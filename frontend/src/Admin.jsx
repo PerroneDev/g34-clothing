@@ -25,7 +25,7 @@ function Admin() {
     if (token && activeTab === 'whatsapp') {
       const fetchStatus = async () => {
         try {
-          const res = await fetch('http://localhost:3001/api/whatsapp/status', {
+          const res = await fetch('https://g34-api.onrender.com/api/whatsapp/status', {
             headers: { 'Authorization': `Bearer ${token}` }
           });
           if (res.ok) {
@@ -44,7 +44,7 @@ function Admin() {
 
   const handleLoginSuccess = async (credentialResponse) => {
     try {
-      const response = await fetch('http://localhost:3001/api/admin/login', {
+      const response = await fetch('https://g34-api.onrender.com/api/admin/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ credential: credentialResponse.credential })
@@ -75,7 +75,7 @@ function Admin() {
   const carregarPedidos = async () => {
     setLoading(true);
     try {
-      const response = await fetch('http://localhost:3001/api/pedidos', {
+      const response = await fetch('https://g34-api.onrender.com/api/pedidos', {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       if (response.ok) {
@@ -94,7 +94,7 @@ function Admin() {
     if (!confirm("Tem certeza que deseja marcar este pedido como aprovado/em produção? Isso enviará uma mensagem no WhatsApp do cliente.")) return;
     
     try {
-      const response = await fetch(`http://localhost:3001/api/pedidos/${id}/aprovar`, {
+      const response = await fetch(`https://g34-api.onrender.com/api/pedidos/${id}/aprovar`, {
         method: 'PUT',
         headers: { 'Authorization': `Bearer ${token}` }
       });
@@ -112,7 +112,7 @@ function Admin() {
     if (!confirm("Tem certeza que deseja EXCLUIR este pedido permanentemente?")) return;
     
     try {
-      const response = await fetch(`http://localhost:3001/api/pedidos/${id}`, {
+      const response = await fetch(`https://g34-api.onrender.com/api/pedidos/${id}`, {
         method: 'DELETE',
         headers: { 'Authorization': `Bearer ${token}` }
       });
@@ -128,7 +128,7 @@ function Admin() {
 
   const alternarItemPronto = async (pedidoId, itemId) => {
     try {
-      const response = await fetch(`http://localhost:3001/api/pedidos/${pedidoId}/item/${itemId}/pronto`, {
+      const response = await fetch(`https://g34-api.onrender.com/api/pedidos/${pedidoId}/item/${itemId}/pronto`, {
         method: 'PUT',
         headers: { 'Authorization': `Bearer ${token}` }
       });
@@ -143,7 +143,7 @@ function Admin() {
   const notificarPronto = async (id) => {
     if (!confirm("Enviar mensagem de WhatsApp avisando que o pedido está pronto para retirada?")) return;
     try {
-      const response = await fetch(`http://localhost:3001/api/pedidos/${id}/notificar-pronto`, {
+      const response = await fetch(`https://g34-api.onrender.com/api/pedidos/${id}/notificar-pronto`, {
         method: 'POST',
         headers: { 'Authorization': `Bearer ${token}` }
       });
@@ -160,7 +160,7 @@ function Admin() {
   const marcarComoEntregue = async (id) => {
     if (!confirm("Marcar este pedido como entregue ao cliente?")) return;
     try {
-      const response = await fetch(`http://localhost:3001/api/pedidos/${id}/entregar`, {
+      const response = await fetch(`https://g34-api.onrender.com/api/pedidos/${id}/entregar`, {
         method: 'PUT',
         headers: { 'Authorization': `Bearer ${token}` }
       });

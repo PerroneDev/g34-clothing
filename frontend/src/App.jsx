@@ -118,7 +118,7 @@ function App() {
     };
 
     try {
-      const response = await fetch('http://localhost:3001/api/pedidos', {
+      const response = await fetch('https://g34-api.onrender.com/api/pedidos', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
