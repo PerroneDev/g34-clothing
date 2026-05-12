@@ -10,7 +10,7 @@ let qrCodeData = '';
 const inicializarWhatsApp = async (mongoose) => {
     console.log('🔄 Inicializando bot do WhatsApp com MongoDB...');
     const store = new MongoStore({ mongoose: mongoose });
-    
+
     client = new Client({
         authStrategy: new RemoteAuth({
             store: store,
@@ -18,7 +18,16 @@ const inicializarWhatsApp = async (mongoose) => {
         }),
         puppeteer: {
             headless: true,
-            args: ['--disable-dev-shm-usage', '--no-sandbox']
+            args: [
+                '--no-sandbox',
+                '--disable-setuid-sandbox',
+                '--disable-dev-shm-usage',
+                '--disable-accelerated-2d-canvas',
+                '--no-first-run',
+                '--no-zygote',
+                '--single-process', // <-- A MÁGICA CONTRA O ERRO DE MEMÓRIA
+                '--disable-gpu'
+            ]
         }
     });
 
@@ -55,7 +64,7 @@ const getWhatsAppStatus = () => {
  * Função para formatar o número do WhatsApp
  */
 function formatarNumero(telefone) {
-    let numeroLimpo = telefone.replace(/\D/g, ''); 
+    let numeroLimpo = telefone.replace(/\D/g, '');
     if (numeroLimpo.length === 10 || numeroLimpo.length === 11) {
         numeroLimpo = '55' + numeroLimpo;
     }
@@ -67,11 +76,11 @@ function formatarNumero(telefone) {
  */
 async function atualizarEtiquetaPedido(telefone, novoStatus) {
     if (!isReady) return;
-    
+
     try {
         const chatId = formatarNumero(telefone);
         const labels = await client.getLabels();
-        
+
         let nomeEtiquetaDesejada = '';
         if (novoStatus === 'Aguardando Pagamento') {
             nomeEtiquetaDesejada = 'Aguardando Pagamento';
@@ -84,7 +93,7 @@ async function atualizarEtiquetaPedido(telefone, novoStatus) {
         if (!nomeEtiquetaDesejada) return;
 
         const etiqueta = labels.find(l => l.name.toLowerCase() === nomeEtiquetaDesejada.toLowerCase());
-        
+
         if (etiqueta) {
             // O addOrRemoveLabels substitui as etiquetas do chat pelas informadas no array
             await client.addOrRemoveLabels([etiqueta.id], [chatId]);
@@ -135,10 +144,10 @@ async function enviarMensagemPedido(pedido) {
 
         await client.sendMessage(chatId, mensagem);
         console.log(`💬 Mensagem automática enviada para ${pedido.telefone} com sucesso!`);
-        
+
         // Aplica a etiqueta inicial
         await atualizarEtiquetaPedido(pedido.telefone, 'Aguardando Pagamento');
-        
+
         return true;
 
     } catch (error) {
