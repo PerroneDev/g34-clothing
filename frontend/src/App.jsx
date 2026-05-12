@@ -33,7 +33,12 @@ const PAGAMENTOS = [
 ];
 
 function App() {
-  const [view, setView] = useState('catalog'); // catalog, product, cart, checkout
+  const [view, setView] = useState(() => {
+    if (window.location.pathname === '/admin') {
+      return 'admin';
+    }
+    return 'catalog';
+  });
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
   const [showSizeGuide, setShowSizeGuide] = useState(false);
