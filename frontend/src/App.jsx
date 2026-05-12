@@ -37,7 +37,7 @@ function App() {
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
   const [showSizeGuide, setShowSizeGuide] = useState(false);
-  
+
   const [produtoAtual, setProdutoAtual] = useState(null);
 
   // Carrinho de Compras
@@ -376,6 +376,19 @@ function App() {
         </div>
       )}
 
+      {/* TELA 5: PAINEL ADMIN */}
+      {view === 'admin' && (
+        <div className="view-fade-in bg-alt" style={{ padding: '2rem' }}>
+          <h1>Painel da Liderança</h1>
+          <p>Área restrita para gestão de pedidos do Congresso.</p>
+          {/* Aqui vai entrar a sua tabela de pedidos depois */}
+
+          <button className="btn-back" onClick={() => { setView('catalog'); window.history.pushState({}, '', '/'); }}>
+            ← Voltar para a Loja
+          </button>
+        </div>
+      )}
+
       {/* MODAL GUIA DE MEDIDAS */}
       {showSizeGuide && (
         <div className="modal-overlay" onClick={() => setShowSizeGuide(false)}>
@@ -401,7 +414,7 @@ function App() {
                 </tbody>
               </table>
             </div>
-            <p style={{fontSize: '0.85rem', color: 'var(--text-muted)', marginTop: '1rem'}}>
+            <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginTop: '1rem' }}>
               * As medidas podem variar em até 2cm para mais ou para menos.
             </p>
           </div>
