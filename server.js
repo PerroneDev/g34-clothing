@@ -157,8 +157,8 @@ app.put('/api/pedidos/:pedidoId/item/:itemId/pronto', verifyToken, async (req, r
 
         item.pronto = !item.pronto; // Alterna o status
         
-        // Verifica se todos os itens estão prontos
-        const todosProntos = pedido.itens.every(i => i.pronto);
+        // Verifica se todos os itens estão prontos (itens de pronta entrega não precisam ser estampados)
+        const todosProntos = pedido.itens.every(i => i.pronto || i.isProntaEntrega);
         if (todosProntos && pedido.status === 'Em Produção') {
             pedido.status = 'Aguardando Entrega';
             // Atualiza a Etiqueta no WhatsApp

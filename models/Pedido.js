@@ -2,7 +2,8 @@ const mongoose = require('mongoose');
 
 const itemSchema = new mongoose.Schema({
     modelo: { type: String, required: true },
-    cor: { type: String, required: true },
+    cor: { type: String, required: false },
+    tecido: { type: String, required: false },
     tamanho: { type: String, required: true },
     quantidade: { type: Number, required: true, default: 1 },
     preco: { type: Number, required: true },
@@ -11,7 +12,7 @@ const itemSchema = new mongoose.Schema({
 }, { _id: true }); // Mudei para _id: true para podermos dar "check" em itens específicos
 
 const pedidoSchema = new mongoose.Schema({
-    pedidoId: { type: String, required: true },
+    pedidoId: { type: String, required: false },
     nome: { type: String, required: true },
     telefone: { type: String, required: true },
     itens: [itemSchema], // Lista de camisas
