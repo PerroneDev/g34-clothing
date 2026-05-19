@@ -1023,8 +1023,27 @@ body {
 
 /* Categories Selector */
 .categories-wrapper {
+  position: relative;
   margin-bottom: 1.5rem;
   margin-top: -0.5rem;
+}
+
+.categories-wrapper::after {
+  content: '›';
+  position: absolute;
+  right: 0;
+  top: 0;
+  height: 100%;
+  width: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  padding-right: 0.25rem;
+  background: linear-gradient(to right, transparent, var(--bg-main) 60%);
+  color: var(--text-muted);
+  font-size: 1.5rem;
+  pointer-events: none;
+  opacity: 0.8;
 }
 
 .categories-scroll {

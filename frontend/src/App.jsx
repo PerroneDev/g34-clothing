@@ -300,12 +300,19 @@ function App() {
     <div className="app-container">
       {/* NAVBAR */}
       <nav className="navbar">
-        <div className="logo">G34<span>Store</span></div>
-        {carrinho.length > 0 && view === 'catalog' && (
-          <div className="cart-badge" onClick={() => setView('cart')}>
-            🛒 <span>{carrinho.length}</span>
-          </div>
-        )}
+        <div className="logo" onClick={() => setView('catalog')} style={{cursor: 'pointer'}}>G34<span>Store</span></div>
+        <div style={{display: 'flex', gap: '1rem', alignItems: 'center'}}>
+           {view !== 'rastreio' && (
+             <span style={{fontSize: '0.85rem', color: 'var(--text-muted)', cursor: 'pointer', fontWeight: 500}} onClick={() => setView('rastreio')}>
+               Acompanhar Pedido
+             </span>
+           )}
+           {carrinho.length > 0 && view === 'catalog' && (
+             <div className="cart-badge" onClick={() => setView('cart')}>
+               🛒 <span>{carrinho.length}</span>
+             </div>
+           )}
+        </div>
       </nav>
 
       {/* TELA 1: VITRINE / CATALOGO */}
@@ -340,22 +347,24 @@ function App() {
                    <h2>🔥 Pronta Entrega</h2>
                    <span>Envio imediato</span>
                  </div>
-                 <div className="categories-scroll" style={{paddingBottom: '1rem'}}>
-                   {produtosProntaEntrega.map(produto => {
-                      const totalEstoque = produto.estoqueLocal.reduce((acc, curr) => acc + curr.qtd, 0);
-                      return (
-                        <div key={'pe-'+produto.id} className="product-card" style={{minWidth: '200px'}} onClick={() => abrirProduto(produto, true)}>
-                           <div className="product-image">
-                             <span className="img-placeholder">FOTO</span>
-                             <span className="badge-stock">{totalEstoque} unid.</span>
-                           </div>
-                           <div className="product-info">
-                             <h3>{produto.nome}</h3>
-                             <p className="price">R$ {produto.preco.toFixed(2).replace('.', ',')}</p>
-                           </div>
-                        </div>
-                      )
-                   })}
+                 <div className="categories-wrapper" style={{margin: 0}}>
+                   <div className="categories-scroll" style={{paddingBottom: '1rem'}}>
+                     {produtosProntaEntrega.map(produto => {
+                        const totalEstoque = produto.estoqueLocal.reduce((acc, curr) => acc + curr.qtd, 0);
+                        return (
+                          <div key={'pe-'+produto.id} className="product-card" style={{minWidth: '200px'}} onClick={() => abrirProduto(produto, true)}>
+                             <div className="product-image">
+                               <span className="img-placeholder">FOTO</span>
+                               <span className="badge-stock">{totalEstoque} unid.</span>
+                             </div>
+                             <div className="product-info">
+                               <h3>{produto.nome}</h3>
+                               <p className="price">R$ {produto.preco.toFixed(2).replace('.', ',')}</p>
+                             </div>
+                          </div>
+                        )
+                     })}
+                   </div>
                  </div>
                </div>
             )}
@@ -602,13 +611,92 @@ function App() {
 
       {/* TELA 5: PAINEL ADMIN */}
       {view === 'admin' && (
-        <div className="view-fade-in bg-alt" style={{ padding: '2rem' }}>
-          <h1>Painel da Liderança</h1>
-          <p>Área restrita para gestão de pedidos do Congresso.</p>
+        <div className="view-fade-in bg-alt" style={{ padding: '2rem', minHeight: '100vh', paddingBottom: '6rem' }}>
+          <h1 style={{marginBottom: '0.5rem'}}>Gestão de Catálogo</h1>
+          <p className="text-muted" style={{marginBottom: '2rem'}}>Adicione ou edite produtos na loja (Mock Frontend).</p>
 
-          <button className="btn-back" onClick={() => { _setView('catalog'); window.history.pushState({ view: 'catalog' }, '', '/'); }}>
+          <div style={{background: 'var(--bg-main)', padding: '1.5rem', borderRadius: '8px', border: '1px solid var(--border)'}}>
+             <h3>Adicionar Novo Produto</h3>
+             <div className="input-field" style={{marginTop: '1rem'}}>
+                <label>Nome do Produto</label>
+                <input type="text" placeholder="Ex: Camisa Jovem" />
+             </div>
+             <div className="input-field">
+                <label>Categoria</label>
+                <select style={{width: '100%', padding: '1rem', background: 'var(--bg-surface)', border: '1px solid var(--border)', color: 'white', borderRadius: '8px'}}>
+                   <option>Camisas</option>
+                   <option>Moletons</option>
+                   <option>Acessórios</option>
+                </select>
+             </div>
+             <div className="input-field">
+                <label>Preço (R$)</label>
+                <input type="number" placeholder="Ex: 50.00" />
+             </div>
+             <div className="input-field">
+                <label>Cores Disponíveis (separadas por vírgula)</label>
+                <input type="text" placeholder="Ex: Preto, Branco" />
+             </div>
+             <button className="btn-primary full" onClick={() => alert('Produto mockado adicionado com sucesso! (Isso será conectado ao banco de dados no Backend)')}>
+               Salvar Produto
+             </button>
+          </div>
+
+          <button className="btn-back" onClick={() => setView('catalog')}>
             ← Voltar para a Loja
           </button>
+        </div>
+      )}
+
+      {/* TELA 6: RASTREIO DE PEDIDO */}
+      {view === 'rastreio' && (
+        <div className="view-fade-in bg-alt" style={{ padding: '2rem', minHeight: '100vh' }}>
+          <button className="btn-back" onClick={() => setView('catalog')}>
+            ← Voltar
+          </button>
+          
+          <div className="checkout-container" style={{paddingTop: '3rem', maxWidth: '400px', margin: '0 auto'}}>
+             <h1 className="checkout-title" style={{textAlign: 'center'}}>Rastreio</h1>
+             <p className="text-muted" style={{textAlign: 'center', marginBottom: '2rem'}}>Acompanhe o status do seu pedido em tempo real.</p>
+
+             <div className="input-field">
+               <label>Código do Pedido</label>
+               <input 
+                  type="text" 
+                  placeholder="Ex: G34-ABCD" 
+                  style={{textTransform: 'uppercase'}}
+                  id="rastreio-input"
+               />
+               <button className="btn-primary full shadow-glow" style={{marginTop: '1rem'}} onClick={() => {
+                  const val = document.getElementById('rastreio-input').value.toUpperCase();
+                  if(!val) return alert('Digite o código do pedido.');
+                  
+                  let status = 'Pagamento Aprovado';
+                  let desc = 'Seu pagamento foi confirmado e logo iniciaremos a produção.';
+                  if (val.endsWith('1') || val.endsWith('A')) {
+                     status = 'Aguardando Pagamento';
+                     desc = 'Estamos aguardando a confirmação do seu pagamento via WhatsApp ou Presencial.';
+                  } else if (val.endsWith('2') || val.endsWith('B')) {
+                     status = 'Em Produção';
+                     desc = 'Suas peças já estão sendo estampadas! Em breve avisaremos para retirar.';
+                  } else if (val.endsWith('3') || val.endsWith('C')) {
+                     status = 'Pronto para Retirada';
+                     desc = 'Seu pedido está pronto! Procure a liderança na igreja para retirar.';
+                  }
+                  
+                  document.getElementById('rastreio-result').style.display = 'block';
+                  document.getElementById('rastreio-status-title').innerText = status;
+                  document.getElementById('rastreio-status-desc').innerText = desc;
+               }}>
+                 Consultar Status
+               </button>
+             </div>
+
+             <div id="rastreio-result" style={{display: 'none', marginTop: '2rem', padding: '1.5rem', background: 'var(--bg-main)', border: '1px solid var(--border)', borderRadius: '8px', textAlign: 'center'}}>
+                 <h2 id="rastreio-status-title" style={{color: 'var(--primary)', marginBottom: '0.5rem'}}>Status</h2>
+                 <p id="rastreio-status-desc" className="text-muted" style={{fontSize: '0.9rem'}}></p>
+             </div>
+          </div>
         </div>
       )}
 

@@ -118,10 +118,11 @@ async function enviarMensagemPedido(pedido) {
     try {
         const chatId = formatarNumero(pedido.telefone);
 
-        let mensagem = `Olá, *${pedido.nome}*! 🙏\n\nRecebemos o seu pedido da coleção do Congresso!\n\n🛒 *Seus Itens:*\n`;
+        let mensagem = `Olá, *${pedido.nome}*! 🙏\n\nRecebemos o seu pedido da coleção do Congresso!\n\n🔖 *Nº do Pedido:* ${pedido.pedidoId || 'G34-TESTE'}\n\n🛒 *Seus Itens:*\n`;
 
         pedido.itens.forEach(item => {
-            mensagem += `- ${item.quantidade}x ${item.modelo} (${item.tecido} | Tam: ${item.tamanho})\n`;
+            const extra = item.isProntaEntrega ? ' 🔥(Pronta Entrega)' : '';
+            mensagem += `- ${item.quantidade}x ${item.modelo} (${item.cor || item.tecido} | Tam: ${item.tamanho})${extra}\n`;
         });
 
         mensagem += `\n💰 *Valor Total: R$ ${pedido.valorTotal.toFixed(2).replace('.', ',')}*\n\n`;
@@ -129,18 +130,20 @@ async function enviarMensagemPedido(pedido) {
         if (pedido.formaPagamento === 'PIX') {
             mensagem += `💳 *Pagamento via PIX*\n\n`;
             mensagem += `Nossa chave PIX é: *CHAVE-AQUI*\n`;
-            mensagem += `Por favor, envie o *comprovante* respondendo a esta mensagem para confirmarmos seu pedido e liberarmos para a produção.\n\nDeus te abençoe!`;
+            mensagem += `Por favor, envie o *comprovante* respondendo a esta mensagem para confirmarmos seu pedido e liberarmos para a produção.\n\n`;
         } else if (pedido.formaPagamento === 'CREDITO') {
             mensagem += `💳 *Pagamento via Cartão de Crédito*\n\n`;
             mensagem += `Você optou pelo pagamento no Cartão de Crédito.\n\n`;
             mensagem += `Por favor, procure a *Liderança dos Jovens* no próximo culto para passarmos o cartão na maquininha.\n\n`;
-            mensagem += `Lembrando que o pedido só será liberado para produção após o pagamento.\n\nDeus te abençoe!`;
+            mensagem += `Lembrando que o pedido só será liberado para produção após o pagamento.\n\n`;
         } else {
             mensagem += `💵 *Pagamento em Dinheiro*\n\n`;
             mensagem += `Você optou pelo pagamento presencial em Dinheiro.\n\n`;
             mensagem += `Por favor, procure a *Liderança dos Jovens* no próximo culto para realizar o acerto financeiro.\n\n`;
-            mensagem += `Lembrando que o pedido só será liberado para produção após o pagamento.\n\nDeus te abençoe!`;
+            mensagem += `Lembrando que o pedido só será liberado para produção após o pagamento.\n\n`;
         }
+        
+        mensagem += `📍 *Acompanhe seu pedido:*\nVocê pode consultar o status do seu pedido a qualquer momento no nosso site, informando o código *${pedido.pedidoId || 'G34-TESTE'}*.\n\nDeus te abençoe!`;
 
         await client.sendMessage(chatId, mensagem);
         console.log(`💬 Mensagem automática enviada para ${pedido.telefone} com sucesso!`);
