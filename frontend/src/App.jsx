@@ -1,56 +1,6 @@
 import { useState, useEffect } from 'react';
 import './index.css';
 
-const PRODUTOS = [
-  {
-    id: 'leao',
-    nome: 'Estampa Leão',
-    desc: 'Design exclusivo com o Leão da Tribo de Judá.',
-    categoria: 'Camisas',
-    cores: ['Preto', 'Branco', 'Areia'],
-    tamanhos: ['P', 'M', 'G', 'GG'],
-    preco: 50.00,
-    estoqueLocal: [
-      { id: 'leao-preto-m', cor: 'Preto', tamanho: 'M', qtd: 2 },
-      { id: 'leao-branco-g', cor: 'Branco', tamanho: 'G', qtd: 1 }
-    ]
-  },
-  {
-    id: 'cruz',
-    nome: 'Estampa Cruz',
-    desc: 'Minimalista e impactante.',
-    categoria: 'Camisas',
-    cores: ['Preto', 'Branco'],
-    tamanhos: ['P', 'M', 'G', 'GG'],
-    preco: 50.00,
-    estoqueLocal: []
-  },
-  {
-    id: 'oversized',
-    nome: 'Oversized Logo',
-    desc: 'Modelo mais largo, estilo street.',
-    categoria: 'Moletons',
-    cores: ['Preto', 'Cinza'],
-    tamanhos: ['M', 'G', 'GG'],
-    preco: 60.00,
-    estoqueLocal: [
-      { id: 'over-cinza-gg', cor: 'Cinza', tamanho: 'GG', qtd: 2 }
-    ]
-  },
-  {
-    id: 'caneca',
-    nome: 'Caneca G34',
-    desc: 'Caneca de cerâmica preta fosca.',
-    categoria: 'Acessórios',
-    cores: ['Preto'],
-    tamanhos: ['Único'],
-    preco: 35.00,
-    estoqueLocal: [
-      { id: 'caneca-preta', cor: 'Preto', tamanho: 'Único', qtd: 10 }
-    ]
-  }
-];
-
 const CATEGORIAS = ['Todos', 'Camisas', 'Moletons', 'Acessórios'];
 
 const CORES_HEX = {
@@ -68,8 +18,26 @@ const PAGAMENTOS = [
 
 function App() {
   const [categoriaSelecionada, setCategoriaSelecionada] = useState('Todos');
+  const [produtos, setProdutos] = useState([]);
+  const [loadingProdutos, setLoadingProdutos] = useState(true);
 
-  const produtosFiltrados = PRODUTOS.filter(p => 
+  useEffect(() => {
+    const fetchProdutos = async () => {
+      try {
+        const response = await fetch('https://g34-api.onrender.com/api/produtos');
+        if (response.ok) {
+          const data = await response.json();
+          setProdutos(data);
+        }
+      } catch (err) {
+        console.error("Erro ao carregar produtos:", err);
+      }
+      setLoadingProdutos(false);
+    };
+    fetchProdutos();
+  }, []);
+
+  const produtosFiltrados = produtos.filter(p => 
     categoriaSelecionada === 'Todos' || p.categoria === categoriaSelecionada
   );
 
@@ -609,44 +577,7 @@ function App() {
         </div>
       )}
 
-      {/* TELA 5: PAINEL ADMIN */}
-      {view === 'admin' && (
-        <div className="view-fade-in bg-alt" style={{ padding: '2rem', minHeight: '100vh', paddingBottom: '6rem' }}>
-          <h1 style={{marginBottom: '0.5rem'}}>Gestão de Catálogo</h1>
-          <p className="text-muted" style={{marginBottom: '2rem'}}>Adicione ou edite produtos na loja (Mock Frontend).</p>
 
-          <div style={{background: 'var(--bg-main)', padding: '1.5rem', borderRadius: '8px', border: '1px solid var(--border)'}}>
-             <h3>Adicionar Novo Produto</h3>
-             <div className="input-field" style={{marginTop: '1rem'}}>
-                <label>Nome do Produto</label>
-                <input type="text" placeholder="Ex: Camisa Jovem" />
-             </div>
-             <div className="input-field">
-                <label>Categoria</label>
-                <select style={{width: '100%', padding: '1rem', background: 'var(--bg-surface)', border: '1px solid var(--border)', color: 'white', borderRadius: '8px'}}>
-                   <option>Camisas</option>
-                   <option>Moletons</option>
-                   <option>Acessórios</option>
-                </select>
-             </div>
-             <div className="input-field">
-                <label>Preço (R$)</label>
-                <input type="number" placeholder="Ex: 50.00" />
-             </div>
-             <div className="input-field">
-                <label>Cores Disponíveis (separadas por vírgula)</label>
-                <input type="text" placeholder="Ex: Preto, Branco" />
-             </div>
-             <button className="btn-primary full" onClick={() => alert('Produto mockado adicionado com sucesso! (Isso será conectado ao banco de dados no Backend)')}>
-               Salvar Produto
-             </button>
-          </div>
-
-          <button className="btn-back" onClick={() => setView('catalog')}>
-            ← Voltar para a Loja
-          </button>
-        </div>
-      )}
 
       {/* TELA 6: RASTREIO DE PEDIDO */}
       {view === 'rastreio' && (

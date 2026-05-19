@@ -6,6 +6,7 @@ const jwt = require('jsonwebtoken');
 const { OAuth2Client } = require('google-auth-library');
 
 const Pedido = require('./models/Pedido');
+const Produto = require('./models/Produto');
 const { inicializarWhatsApp, getWhatsAppStatus, enviarMensagemPedido, atualizarEtiquetaPedido, enviarMensagemAprovacao, enviarMensagemPronto } = require('./whatsapp');
 
 const app = express();
@@ -25,6 +26,22 @@ mongoose.connect(process.env.MONGO_URI)
 // ============================================
 // ROTAS DA LOJA (PÚBLICAS)
 // ============================================
+
+app.get('/api/produtos', async (req, res) => {
+    try {
+        const produtos = await Produto.find();
+        // Mapeia _id para id para manter compatibilidade com o frontend antigo
+        const produtosFormatados = produtos.map(p => {
+            const obj = p.toObject();
+            obj.id = obj._id.toString();
+            return obj;
+        });
+        res.json(produtosFormatados);
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ erro: 'Erro ao buscar produtos' });
+    }
+});
 
 app.get('/api/ping', (req, res) => res.send('pong'));
 
@@ -217,6 +234,38 @@ app.put('/api/pedidos/:id/entregar', verifyToken, async (req, res) => {
     } catch (error) {
         console.error("Erro ao marcar como entregue:", error);
         res.status(500).json({ erro: 'Erro ao marcar como entregue' });
+    }
+});
+
+// ============================================
+// GESTÃO DE PRODUTOS (ADMIN)
+// ============================================
+app.post('/api/admin/produtos', verifyToken, async (req, res) => {
+    try {
+        const novoProduto = new Produto(req.body);
+        const salvo = await novoProduto.save();
+        res.status(201).json(salvo);
+    } catch (error) {
+        console.error("Erro ao salvar produto:", error);
+        res.status(500).json({ erro: 'Erro ao criar produto' });
+    }
+});
+
+app.put('/api/admin/produtos/:id', verifyToken, async (req, res) => {
+    try {
+        const atualizado = await Produto.findByIdAndUpdate(req.params.id, req.body, { new: true });
+        res.json(atualizado);
+    } catch (error) {
+        res.status(500).json({ erro: 'Erro ao atualizar produto' });
+    }
+});
+
+app.delete('/api/admin/produtos/:id', verifyToken, async (req, res) => {
+    try {
+        await Produto.findByIdAndDelete(req.params.id);
+        res.json({ mensagem: 'Produto excluído com sucesso' });
+    } catch (error) {
+        res.status(500).json({ erro: 'Erro ao excluir produto' });
     }
 });
 

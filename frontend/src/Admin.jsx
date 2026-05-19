@@ -1,14 +1,16 @@
 import { useState, useEffect } from 'react';
 import { GoogleLogin } from '@react-oauth/google';
 import { QRCodeSVG } from 'qrcode.react';
-import { CheckCircle, Clock, LogOut, Trash2, LayoutDashboard, Scissors, Package, CheckCheck, Send, MessageSquare } from 'lucide-react';
+import { CheckCircle, Clock, LogOut, Trash2, LayoutDashboard, Scissors, Package, CheckCheck, Send, MessageSquare, Store, Plus } from 'lucide-react';
 import './index.css';
 
 function Admin() {
   const [token, setToken] = useState(localStorage.getItem('adminToken'));
   const [user, setUser] = useState(JSON.parse(localStorage.getItem('adminUser')));
   const [pedidos, setPedidos] = useState([]);
+  const [produtos, setProdutos] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [novoProduto, setNovoProduto] = useState({ nome: '', desc: '', categoria: 'Camisas', preco: '', cores: '', tamanhos: '' });
   
   // Controle de Abas: 'dashboard' ou 'producao'
   const [activeTab, setActiveTab] = useState('dashboard');
@@ -17,6 +19,7 @@ function Admin() {
   useEffect(() => {
     if (token) {
       carregarPedidos();
+      carregarProdutos();
     }
   }, [token]);
 
@@ -88,6 +91,97 @@ function Admin() {
       console.error("Erro ao carregar pedidos", err);
     }
     setLoading(false);
+  };
+
+  const carregarProdutos = async () => {
+    try {
+      const response = await fetch('https://g34-api.onrender.com/api/produtos');
+      if (response.ok) {
+        setProdutos(await response.json());
+      }
+    } catch (err) {
+      console.error("Erro ao carregar produtos", err);
+    }
+  };
+
+  const salvarProduto = async () => {
+    if (!novoProduto.nome || !novoProduto.preco) return alert('Preencha nome e preço.');
+    
+    const payload = {
+        ...novoProduto,
+        preco: parseFloat(novoProduto.preco),
+        cores: novoProduto.cores.split(',').map(c => c.trim()).filter(c => c),
+        tamanhos: novoProduto.tamanhos.split(',').map(t => t.trim().toUpperCase()).filter(t => t)
+    };
+
+    try {
+      const res = await fetch('https://g34-api.onrender.com/api/admin/produtos', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        body: JSON.stringify(payload)
+      });
+      if (res.ok) {
+        carregarProdutos();
+        setNovoProduto({ nome: '', desc: '', categoria: 'Camisas', preco: '', cores: '', tamanhos: '' });
+        alert('Produto salvo com sucesso!');
+      } else {
+        alert('Erro ao salvar produto.');
+      }
+    } catch (err) {
+      alert('Erro de conexão.');
+    }
+  };
+
+  const excluirProduto = async (id) => {
+    if (!confirm('Excluir este produto do catálogo?')) return;
+    try {
+      const res = await fetch(`https://g34-api.onrender.com/api/admin/produtos/${id}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (res.ok) {
+        carregarProdutos();
+      }
+    } catch (err) {
+      alert('Erro de conexão.');
+    }
+  };
+
+  const adicionarEstoque = async (produto) => {
+      const cor = prompt('Qual a COR da peça a pronta entrega? (ex: Preto)');
+      const tamanho = prompt('Qual o TAMANHO? (ex: M)');
+      const qtdStr = prompt('Quantas unidades?');
+      if (!cor || !tamanho || !qtdStr) return;
+
+      const qtd = parseInt(qtdStr);
+      if (isNaN(qtd) || qtd <= 0) return alert('Quantidade inválida');
+
+      // Clona o produto e adiciona o estoque
+      const payload = { ...produto };
+      const idEstoque = `${produto.id}-${cor.toLowerCase()}-${tamanho.toLowerCase()}-${Math.random().toString(36).substr(2, 4)}`;
+      
+      const idx = payload.estoqueLocal.findIndex(e => e.cor.toLowerCase() === cor.toLowerCase() && e.tamanho.toLowerCase() === tamanho.toLowerCase());
+      
+      if (idx > -1) {
+          payload.estoqueLocal[idx].qtd += qtd;
+      } else {
+          payload.estoqueLocal.push({ id: idEstoque, cor, tamanho, qtd });
+      }
+
+      try {
+        const res = await fetch(`https://g34-api.onrender.com/api/admin/produtos/${produto.id}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+            body: JSON.stringify(payload)
+        });
+        if (res.ok) {
+            carregarProdutos();
+        } else {
+            alert('Erro ao atualizar estoque');
+        }
+      } catch (err) {
+          alert('Erro de conexão');
+      }
   };
 
   const aprovarPedido = async (id) => {
@@ -253,6 +347,12 @@ function Admin() {
           <LayoutDashboard size={18}/> Gestão Geral
         </button>
         <button 
+          className={`admin-tab ${activeTab === 'catalogo' ? 'active' : ''}`}
+          onClick={() => setActiveTab('catalogo')}
+        >
+          <Store size={18}/> Catálogo
+        </button>
+        <button 
           className={`admin-tab ${activeTab === 'producao' ? 'active' : ''}`}
           onClick={() => setActiveTab('producao')}
         >
@@ -378,6 +478,107 @@ function Admin() {
               )}
             </div>
           </>
+        )}
+
+        {activeTab === 'catalogo' && (
+          <div className="admin-orders-section">
+            <div className="section-title">
+              <h2>Gestão de Catálogo</h2>
+              <button className="btn-refresh" onClick={carregarProdutos}>Atualizar</button>
+            </div>
+            
+            <div style={{background: 'var(--bg-main)', padding: '1.5rem', borderRadius: '8px', border: '1px solid var(--border)', marginBottom: '2rem'}}>
+               <h3><Plus size={16} style={{display: 'inline', marginRight: '8px'}}/> Adicionar Novo Produto</h3>
+               <div style={{display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginTop: '1rem'}}>
+                 <div className="input-field">
+                    <label>Nome do Produto</label>
+                    <input type="text" value={novoProduto.nome} onChange={e => setNovoProduto({...novoProduto, nome: e.target.value})} placeholder="Ex: Camisa Jovem" />
+                 </div>
+                 <div className="input-field">
+                    <label>Preço (R$)</label>
+                    <input type="number" value={novoProduto.preco} onChange={e => setNovoProduto({...novoProduto, preco: e.target.value})} placeholder="Ex: 50.00" />
+                 </div>
+                 <div className="input-field">
+                    <label>Categoria</label>
+                    <select value={novoProduto.categoria} onChange={e => setNovoProduto({...novoProduto, categoria: e.target.value})} style={{width: '100%', padding: '1rem', background: 'var(--bg-surface)', border: '1px solid var(--border)', color: 'white', borderRadius: '8px'}}>
+                       <option>Camisas</option>
+                       <option>Moletons</option>
+                       <option>Acessórios</option>
+                    </select>
+                 </div>
+                 <div className="input-field">
+                    <label>Descrição Opcional</label>
+                    <input type="text" value={novoProduto.desc} onChange={e => setNovoProduto({...novoProduto, desc: e.target.value})} placeholder="Ex: 100% algodão" />
+                 </div>
+                 <div className="input-field">
+                    <label>Cores (separadas por vírgula)</label>
+                    <input type="text" value={novoProduto.cores} onChange={e => setNovoProduto({...novoProduto, cores: e.target.value})} placeholder="Ex: Preto, Branco" />
+                 </div>
+                 <div className="input-field">
+                    <label>Tamanhos (separados por vírgula)</label>
+                    <input type="text" value={novoProduto.tamanhos} onChange={e => setNovoProduto({...novoProduto, tamanhos: e.target.value})} placeholder="Ex: P, M, G" />
+                 </div>
+               </div>
+               <button className="btn-primary" style={{marginTop: '1.5rem'}} onClick={salvarProduto}>
+                 Salvar Produto
+               </button>
+            </div>
+
+            <div className="table-responsive">
+              <table className="admin-table">
+                <thead>
+                  <tr>
+                    <th>Produto</th>
+                    <th>Categoria</th>
+                    <th>Preço</th>
+                    <th>Variações</th>
+                    <th>Estoque (Pronta Entrega)</th>
+                    <th style={{textAlign: 'right'}}>Ações</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {produtos.map(p => (
+                    <tr key={p.id || p._id}>
+                      <td>
+                        <strong>{p.nome}</strong><br/>
+                        <span className="text-muted" style={{fontSize: '0.85rem'}}>{p.desc}</span>
+                      </td>
+                      <td>{p.categoria}</td>
+                      <td>R$ {p.preco?.toFixed(2).replace('.', ',')}</td>
+                      <td>
+                        <div style={{fontSize: '0.85rem', color: 'var(--text-muted)'}}>
+                          Cores: {p.cores?.join(', ') || 'N/A'}<br/>
+                          Tam: {p.tamanhos?.join(', ') || 'N/A'}
+                        </div>
+                      </td>
+                      <td>
+                        {p.estoqueLocal && p.estoqueLocal.length > 0 ? (
+                           <ul style={{fontSize: '0.85rem', paddingLeft: '1rem', color: 'var(--primary)'}}>
+                             {p.estoqueLocal.map(e => (
+                               <li key={e.id}>{e.cor} - {e.tamanho}: <strong>{e.qtd} un</strong></li>
+                             ))}
+                           </ul>
+                        ) : (
+                           <span className="text-muted" style={{fontSize: '0.85rem'}}>Sem estoque físico</span>
+                        )}
+                        <button className="btn-approve" style={{marginTop: '0.5rem', background: 'var(--bg-surface)', border: '1px solid var(--border)', fontSize: '0.8rem', padding: '0.3rem 0.6rem'}} onClick={() => adicionarEstoque(p)}>
+                           + Adicionar Estoque
+                        </button>
+                      </td>
+                      <td style={{textAlign: 'right'}}>
+                         <button className="btn-logout" title="Excluir Produto" onClick={() => excluirProduto(p.id || p._id)}>
+                            <Trash2 size={16}/>
+                         </button>
+                      </td>
+                    </tr>
+                  ))}
+                  {produtos.length === 0 && (
+                    <tr><td colSpan="6" style={{textAlign: 'center', padding: '2rem'}}>Nenhum produto cadastrado.</td></tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
         )}
 
         {activeTab === 'producao' && (
