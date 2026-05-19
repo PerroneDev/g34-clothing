@@ -16,6 +16,7 @@ const produtoSchema = new mongoose.Schema({
         nome: { type: String, required: true },
         hex: { type: String, required: true }
     }],
+    modelos: [{ type: String }],
     tamanhos: [{ type: String }],
     estoqueLocal: [estoqueLocalSchema]
 });

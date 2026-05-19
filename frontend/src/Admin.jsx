@@ -4,6 +4,7 @@ import { QRCodeSVG } from 'qrcode.react';
 import { CheckCircle, Clock, LogOut, Trash2, LayoutDashboard, Scissors, Package, CheckCheck, Send, MessageSquare, Store, Plus } from 'lucide-react';
 import './index.css';
 
+const OPCOES_MODELOS = ['Padrão', 'Baby Look', 'Oversized', 'Infantil'];
 const OPCOES_TAMANHOS = ['P', 'M', 'G', 'GG', 'XG', '2 anos', '4 anos', '6 anos', '8 anos', '10 anos', '12 anos', '14 anos', '16 anos', 'Único'];
 
 function Admin() {
@@ -12,7 +13,7 @@ function Admin() {
   const [pedidos, setPedidos] = useState([]);
   const [produtos, setProdutos] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [novoProduto, setNovoProduto] = useState({ nome: '', desc: '', categoria: 'Camisas', preco: '', cores: [], tamanhos: [] });
+  const [novoProduto, setNovoProduto] = useState({ nome: '', desc: '', categoria: 'Camisas', preco: '', cores: [], tamanhos: [], modelos: [] });
   const [novaCor, setNovaCor] = useState({ nome: '', hex: '#000000' });
   
   // Controle de Abas: 'dashboard' ou 'producao'
@@ -116,6 +117,15 @@ function Admin() {
       });
   };
 
+  const toggleModelo = (mod) => {
+      setNovoProduto(prev => {
+          const modelos = prev.modelos?.includes(mod) 
+              ? prev.modelos.filter(m => m !== mod)
+              : [...(prev.modelos || []), mod];
+          return { ...prev, modelos };
+      });
+  };
+
   const adicionarCor = () => {
       if (!novaCor.nome || !novaCor.hex) return;
       setNovoProduto(prev => ({
@@ -148,7 +158,7 @@ function Admin() {
       });
       if (res.ok) {
         carregarProdutos();
-        setNovoProduto({ nome: '', desc: '', categoria: 'Camisas', preco: '', cores: [], tamanhos: [] });
+        setNovoProduto({ nome: '', desc: '', categoria: 'Camisas', preco: '', cores: [], tamanhos: [], modelos: [] });
         alert('Produto salvo com sucesso!');
       } else {
         alert('Erro ao salvar produto.');
@@ -557,7 +567,23 @@ function Admin() {
                     )}
                  </div>
                  <div className="input-field" style={{ gridColumn: '1 / -1' }}>
-                    <label>Tamanhos</label>
+                    <label>Modelos Disponíveis</label>
+                    <div style={{display: 'flex', flexWrap: 'wrap', gap: '0.5rem'}}>
+                        {OPCOES_MODELOS.map(mod => (
+                            <button 
+                                key={mod}
+                                type="button"
+                                className={`pill size-pill ${(novoProduto.modelos || []).includes(mod) ? 'active' : ''}`}
+                                onClick={() => toggleModelo(mod)}
+                                style={{ margin: 0, padding: '0.5rem 1rem', fontSize: '0.85rem' }}
+                            >
+                                {mod}
+                            </button>
+                        ))}
+                    </div>
+                 </div>
+                 <div className="input-field" style={{ gridColumn: '1 / -1' }}>
+                    <label>Tamanhos Disponíveis</label>
                     <div style={{display: 'flex', flexWrap: 'wrap', gap: '0.5rem'}}>
                         {OPCOES_TAMANHOS.map(tam => (
                             <button 
@@ -601,6 +627,7 @@ function Admin() {
                       <td>R$ {p.preco?.toFixed(2).replace('.', ',')}</td>
                       <td>
                         <div style={{fontSize: '0.85rem', color: 'var(--text-muted)'}}>
+                          Mod: {p.modelos?.join(', ') || 'N/A'}<br/>
                           Cores: {p.cores?.map(c => typeof c === 'string' ? c : c.nome).join(', ') || 'N/A'}<br/>
                           Tam: {p.tamanhos?.join(', ') || 'N/A'}
                         </div>

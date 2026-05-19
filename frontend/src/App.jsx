@@ -138,10 +138,18 @@ function App() {
       defaultTamanho = produto.estoqueLocal[0].tamanho;
     }
 
-    const hasAdultSizes = produto.tamanhos && produto.tamanhos.some(t => !['2 anos', '4 anos', '6 anos', '8 anos', '10 anos', '12 anos', '14 anos', '16 anos'].includes(t));
+    const availableModelos = produto.modelos && produto.modelos.length > 0 ? produto.modelos : ['Padrão', 'Baby Look', 'Oversized', 'Infantil'];
+    let defaultModelo = availableModelos[0];
+    
+    // Attempt smart default if availableModelos is fallback
+    if (!produto.modelos || produto.modelos.length === 0) {
+      const hasAdultSizes = produto.tamanhos && produto.tamanhos.some(t => !['2 anos', '4 anos', '6 anos', '8 anos', '10 anos', '12 anos', '14 anos', '16 anos'].includes(t));
+      if (!hasAdultSizes && availableModelos.includes('Infantil')) defaultModelo = 'Infantil';
+    }
+
     setSelecaoTemp({
       cor: defaultCor,
-      tipoModelo: hasAdultSizes ? 'Padrão' : 'Infantil',
+      tipoModelo: defaultModelo,
       tamanho: defaultTamanho
     });
     setView('product');
@@ -434,7 +442,7 @@ function App() {
               <div className="selector-group">
                 <h3>2. Modelo da Camisa</h3>
                 <div className="pills-row size-pills">
-                  {['Padrão', 'Baby Look', 'Oversized', 'Infantil'].map(m => (
+                  {(produtoAtual.modelos && produtoAtual.modelos.length > 0 ? produtoAtual.modelos : ['Padrão', 'Baby Look', 'Oversized', 'Infantil']).map(m => (
                     <button
                       key={m}
                       className={`pill size-pill ${selecaoTemp.tipoModelo === m ? 'active' : ''}`}
