@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import './index.css';
 
 const CAMISAS = [
@@ -33,12 +33,35 @@ const PAGAMENTOS = [
 ];
 
 function App() {
-  const [view, setView] = useState(() => {
+  const [view, _setView] = useState(() => {
     if (window.location.pathname === '/admin') {
       return 'admin';
     }
     return 'catalog';
   });
+
+  const setView = (newView) => {
+    if (newView === view) return;
+    _setView(newView);
+    window.scrollTo(0, 0);
+    window.history.pushState({ view: newView }, '', '');
+  };
+
+  useEffect(() => {
+    // Guarda o estado inicial no history ao abrir
+    window.history.replaceState({ view }, '', '');
+
+    const handlePopState = (event) => {
+      if (event.state && event.state.view) {
+        _setView(event.state.view);
+      } else {
+        _setView(window.location.pathname === '/admin' ? 'admin' : 'catalog');
+      }
+    };
+
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, [view]);
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
   const [showSizeGuide, setShowSizeGuide] = useState(false);
@@ -388,7 +411,7 @@ function App() {
           <p>Área restrita para gestão de pedidos do Congresso.</p>
           {/* Aqui vai entrar a sua tabela de pedidos depois */}
 
-          <button className="btn-back" onClick={() => { setView('catalog'); window.history.pushState({}, '', '/'); }}>
+          <button className="btn-back" onClick={() => { _setView('catalog'); window.history.pushState({ view: 'catalog' }, '', '/'); }}>
             ← Voltar para a Loja
           </button>
         </div>
@@ -425,6 +448,21 @@ function App() {
           </div>
         </div>
       )}
+
+      {/* FOOTER */}
+      <footer className="footer-section">
+        <div className="footer-content">
+          <p>© 2026 G34 Store. Todos os direitos reservados.</p>
+          <div className="social-links">
+            <a href="https://instagram.com/g34" target="_blank" rel="noreferrer">Instagram</a>
+          </div>
+        </div>
+      </footer>
+
+      {/* FLOATING WHATSAPP BUTTON */}
+      <a href="https://wa.me/5522999999999" target="_blank" rel="noreferrer" className="floating-whatsapp">
+        <span className="whatsapp-icon">💬</span>
+      </a>
     </div>
   );
 }
