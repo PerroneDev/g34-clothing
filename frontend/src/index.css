@@ -1020,3 +1020,59 @@ body {
   font-size: 1.5rem;
   color: white;
 }
+
+/* Categories Selector */
+.categories-wrapper {
+  margin-bottom: 1.5rem;
+  margin-top: -0.5rem;
+}
+
+.categories-scroll {
+  display: flex;
+  gap: 0.75rem;
+  overflow-x: auto;
+  padding-bottom: 0.5rem;
+  scrollbar-width: none;
+}
+.categories-scroll::-webkit-scrollbar {
+  display: none;
+}
+
+.cat-pill {
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+  padding: 0.5rem 1.25rem;
+  border-radius: 20px;
+  font-size: 0.9rem;
+  font-weight: 500;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.cat-pill.active {
+  background: var(--primary);
+  border-color: var(--primary);
+  color: white;
+  box-shadow: 0 4px 15px var(--primary-glow);
+}
+
+/* Badge Pronta Entrega */
+.product-image {
+  position: relative;
+}
+
+.badge-stock {
+  position: absolute;
+  top: 0.5rem;
+  right: 0.5rem;
+  background: rgba(249, 115, 22, 0.9);
+  backdrop-filter: blur(4px);
+  color: white;
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  z-index: 5;
+}

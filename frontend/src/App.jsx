@@ -1,29 +1,46 @@
 import { useState, useEffect } from 'react';
 import './index.css';
 
-const CAMISAS = [
+const PRODUTOS = [
   {
     id: 'leao',
     nome: 'Estampa Leão',
     desc: 'Design exclusivo com o Leão da Tribo de Judá.',
+    categoria: 'Camisas',
     tecidos: ['Premium', 'Comum'],
-    preco: 50.00
+    preco: 50.00,
+    prontaEntrega: 5
   },
   {
     id: 'cruz',
     nome: 'Estampa Cruz',
     desc: 'Minimalista e impactante.',
+    categoria: 'Camisas',
     tecidos: ['Premium', 'Baby Look'],
-    preco: 50.00
+    preco: 50.00,
+    prontaEntrega: 0
   },
   {
     id: 'oversized',
     nome: 'Oversized Logo',
     desc: 'Modelo mais largo, estilo street.',
+    categoria: 'Moletons',
     tecidos: ['Premium'],
-    preco: 60.00
+    preco: 60.00,
+    prontaEntrega: 2
+  },
+  {
+    id: 'caneca',
+    nome: 'Caneca G34',
+    desc: 'Caneca de cerâmica preta fosca.',
+    categoria: 'Acessórios',
+    tecidos: ['Único'],
+    preco: 35.00,
+    prontaEntrega: 10
   }
 ];
+
+const CATEGORIAS = ['Todos', 'Camisas', 'Moletons', 'Acessórios'];
 
 const TAMANHOS = ['P', 'M', 'G', 'GG'];
 const PAGAMENTOS = [
@@ -33,6 +50,12 @@ const PAGAMENTOS = [
 ];
 
 function App() {
+  const [categoriaSelecionada, setCategoriaSelecionada] = useState('Todos');
+
+  const produtosFiltrados = PRODUTOS.filter(p => 
+    categoriaSelecionada === 'Todos' || p.categoria === categoriaSelecionada
+  );
+
   const [view, _setView] = useState(() => {
     if (window.location.pathname === '/admin') {
       return 'admin';
@@ -204,21 +227,38 @@ function App() {
           </header>
 
           <main className="catalog-section">
+            <div className="categories-wrapper">
+              <div className="categories-scroll">
+                {CATEGORIAS.map(cat => (
+                  <button 
+                    key={cat} 
+                    className={`cat-pill ${categoriaSelecionada === cat ? 'active' : ''}`}
+                    onClick={() => setCategoriaSelecionada(cat)}
+                  >
+                    {cat}
+                  </button>
+                ))}
+              </div>
+            </div>
+
             <div className="section-header">
-              <h2>Lançamentos</h2>
-              <span>{CAMISAS.length} produtos</span>
+              <h2>{categoriaSelecionada === 'Todos' ? 'Lançamentos' : categoriaSelecionada}</h2>
+              <span>{produtosFiltrados.length} produtos</span>
             </div>
 
             <div className="product-grid">
-              {CAMISAS.map(camisa => (
-                <div key={camisa.id} className="product-card" onClick={() => abrirProduto(camisa)}>
+              {produtosFiltrados.map(produto => (
+                <div key={produto.id} className="product-card" onClick={() => abrirProduto(produto)}>
                   <div className="product-image">
                     {/* Placeholder para a foto */}
                     <span className="img-placeholder">FOTO AQUI</span>
+                    {produto.prontaEntrega > 0 && (
+                      <span className="badge-stock">🔥 {produto.prontaEntrega} a pronta entrega</span>
+                    )}
                   </div>
                   <div className="product-info">
-                    <h3>{camisa.nome}</h3>
-                    <p className="price">R$ {camisa.preco.toFixed(2).replace('.', ',')}</p>
+                    <h3>{produto.nome}</h3>
+                    <p className="price">R$ {produto.preco.toFixed(2).replace('.', ',')}</p>
                   </div>
                 </div>
               ))}
@@ -454,7 +494,7 @@ function App() {
         <div className="footer-content">
           <p>© 2026 G34 Store. Todos os direitos reservados.</p>
           <div className="social-links">
-            <a href="https://instagram.com/g34" target="_blank" rel="noreferrer">Instagram</a>
+            <a href="https://www.instagram.com/g34_dafe/" target="_blank" rel="noreferrer">Instagram</a>
           </div>
         </div>
       </footer>
