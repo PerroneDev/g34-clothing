@@ -41,6 +41,8 @@ function App() {
     categoriaSelecionada === 'Todos' || p.categoria === categoriaSelecionada
   );
 
+  const produtosProntaEntrega = produtos.filter(p => p.estoqueLocal && p.estoqueLocal.length > 0);
+
   const [view, _setView] = useState(() => {
     if (window.location.pathname === '/admin') {
       return 'admin';
