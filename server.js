@@ -28,6 +28,17 @@ mongoose.connect(process.env.MONGO_URI)
 
 app.get('/api/ping', (req, res) => res.send('pong'));
 
+// Rastrear Pedido (Público)
+app.get('/api/pedidos/rastreio/:pedidoId', async (req, res) => {
+    try {
+        const pedido = await Pedido.findOne({ pedidoId: req.params.pedidoId });
+        if (!pedido) return res.status(404).json({ erro: 'Pedido não encontrado' });
+        res.json({ status: pedido.status });
+    } catch (error) {
+        res.status(500).json({ erro: 'Erro ao buscar pedido' });
+    }
+});
+
 app.post('/api/pedidos', async (req, res) => {
     try {
         const novoPedido = new Pedido(req.body);
@@ -109,11 +120,15 @@ app.put('/api/pedidos/:id/aprovar', verifyToken, async (req, res) => {
         const pedido = await Pedido.findById(req.params.id);
         if (!pedido) return res.status(404).json({ erro: 'Pedido não encontrado' });
 
-        pedido.status = 'Em Produção'; 
+        // Verifica se TODOS os itens do pedido são pronta entrega
+        const todosProntaEntrega = pedido.itens.every(i => i.isProntaEntrega);
+
+        // Se for tudo pronta entrega, já vai direto para aguardando retirada
+        pedido.status = todosProntaEntrega ? 'Aguardando Entrega' : 'Em Produção'; 
         await pedido.save();
 
         // 1. Atualiza a Etiqueta no WhatsApp
-        await atualizarEtiquetaPedido(pedido.telefone, 'Em Produção');
+        await atualizarEtiquetaPedido(pedido.telefone, pedido.status);
         
         // 2. Envia mensagem de agradecimento/confirmação pro cliente
         await enviarMensagemAprovacao(pedido.telefone);

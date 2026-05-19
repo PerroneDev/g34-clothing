@@ -194,13 +194,15 @@ function Admin() {
   pedidosAprovados.forEach(p => {
     if (p.itens) {
       p.itens.forEach((item, itemIdx) => {
-        itensParaProducao.push({
-          ...item,
-          pedidoId: p._id,
-          clienteNome: p.nome,
-          dataPedido: p.dataPedido,
-          _id: item._id || itemIdx
-        });
+        if (!item.isProntaEntrega) {
+          itensParaProducao.push({
+            ...item,
+            pedidoId: p._id,
+            clienteNome: p.nome,
+            dataPedido: p.dataPedido,
+            _id: item._id || itemIdx
+          });
+        }
       });
     }
   });
@@ -330,7 +332,7 @@ function Admin() {
                             <ul className="admin-item-list">
                               {pedido.itens?.map((item, idx) => (
                                 <li key={item._id || idx}>
-                                  {item.quantidade}x {item.modelo} ({item.tamanho})
+                                  {item.quantidade}x {item.modelo} ({item.cor || item.tecido} | {item.tamanho}) {item.isProntaEntrega && '🔥'}
                                 </li>
                               )) || <span style={{color: 'red'}}>Pedido Antigo Sem Itens</span>}
                             </ul>
@@ -395,7 +397,7 @@ function Admin() {
                     <th>Status</th>
                     <th>Modelo</th>
                     <th>Tamanho</th>
-                    <th>Tecido</th>
+                    <th>Cor</th>
                     <th>Qtd</th>
                     <th>Cliente</th>
                     <th>Data do Pedido</th>
@@ -416,7 +418,7 @@ function Admin() {
                       </td>
                       <td><strong>{item.modelo}</strong></td>
                       <td><span className="badge" style={{background: 'var(--bg-main)', border: '1px solid var(--border)'}}>{item.tamanho}</span></td>
-                      <td>{item.tecido}</td>
+                      <td>{item.cor || item.tecido}</td>
                       <td>{item.quantidade}x</td>
                       <td className="text-muted">{item.clienteNome}</td>
                       <td className="text-muted">{new Date(item.dataPedido).toLocaleDateString('pt-BR')}</td>

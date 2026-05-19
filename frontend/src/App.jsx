@@ -667,26 +667,38 @@ function App() {
                   style={{textTransform: 'uppercase'}}
                   id="rastreio-input"
                />
-               <button className="btn-primary full shadow-glow" style={{marginTop: '1rem'}} onClick={() => {
+               <button className="btn-primary full shadow-glow" style={{marginTop: '1rem'}} onClick={async () => {
                   const val = document.getElementById('rastreio-input').value.toUpperCase();
                   if(!val) return alert('Digite o código do pedido.');
                   
-                  let status = 'Pagamento Aprovado';
-                  let desc = 'Seu pagamento foi confirmado e logo iniciaremos a produção.';
-                  if (val.endsWith('1') || val.endsWith('A')) {
-                     status = 'Aguardando Pagamento';
-                     desc = 'Estamos aguardando a confirmação do seu pagamento via WhatsApp ou Presencial.';
-                  } else if (val.endsWith('2') || val.endsWith('B')) {
-                     status = 'Em Produção';
-                     desc = 'Suas peças já estão sendo estampadas! Em breve avisaremos para retirar.';
-                  } else if (val.endsWith('3') || val.endsWith('C')) {
-                     status = 'Pronto para Retirada';
-                     desc = 'Seu pedido está pronto! Procure a liderança na igreja para retirar.';
+                  try {
+                     const response = await fetch(`https://g34-api.onrender.com/api/pedidos/rastreio/${val}`);
+                     if (!response.ok) {
+                         alert('Pedido não encontrado ou erro no servidor.');
+                         return;
+                     }
+                     const data = await response.json();
+                     let status = data.status;
+                     let desc = '';
+                     
+                     if (status === 'Aguardando Pagamento') {
+                        desc = 'Estamos aguardando a confirmação do seu pagamento via WhatsApp ou Presencial.';
+                     } else if (status === 'Em Produção') {
+                        desc = 'Suas peças já estão sendo estampadas! Em breve avisaremos para retirar.';
+                     } else if (status === 'Aguardando Entrega') {
+                        desc = 'Seu pedido está pronto! Procure a liderança na igreja para retirar.';
+                     } else if (status === 'Entregue') {
+                        desc = 'Pedido entregue com sucesso!';
+                     } else {
+                        desc = 'Seu pedido está sendo processado.';
+                     }
+
+                     document.getElementById('rastreio-result').style.display = 'block';
+                     document.getElementById('rastreio-status-title').innerText = status;
+                     document.getElementById('rastreio-status-desc').innerText = desc;
+                  } catch (error) {
+                     alert('Erro de conexão ao buscar pedido.');
                   }
-                  
-                  document.getElementById('rastreio-result').style.display = 'block';
-                  document.getElementById('rastreio-status-title').innerText = status;
-                  document.getElementById('rastreio-status-desc').innerText = desc;
                }}>
                  Consultar Status
                </button>
