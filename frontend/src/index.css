@@ -1075,4 +1075,60 @@ body {
   font-size: 0.75rem;
   font-weight: 700;
   z-index: 5;
+.text-warning { color: #f59e0b; }
+
+/* Color Selector */
+.color-pills-row {
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.color-circle-wrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  cursor: pointer;
+  opacity: 0.8;
+  transition: all 0.2s;
+}
+
+.color-circle-wrapper:hover {
+  opacity: 1;
+}
+
+.color-circle-wrapper.active {
+  opacity: 1;
+}
+
+.color-circle {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: 2px solid var(--border);
+  box-shadow: 0 2px 5px rgba(0,0,0,0.5);
+  transition: all 0.2s;
+}
+
+.color-circle-wrapper.active .color-circle {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.3);
+  transform: scale(1.1);
+}
+
+.color-name {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  font-weight: 500;
+}
+
+.color-circle-wrapper.active .color-name {
+  color: var(--text-main);
+}
+
+.pill.disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+  border-style: dashed;
 }

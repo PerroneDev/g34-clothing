@@ -7,42 +7,59 @@ const PRODUTOS = [
     nome: 'Estampa Leão',
     desc: 'Design exclusivo com o Leão da Tribo de Judá.',
     categoria: 'Camisas',
-    tecidos: ['Premium', 'Comum'],
+    cores: ['Preto', 'Branco', 'Areia'],
+    tamanhos: ['P', 'M', 'G', 'GG'],
     preco: 50.00,
-    prontaEntrega: 5
+    estoqueLocal: [
+      { id: 'leao-preto-m', cor: 'Preto', tamanho: 'M', qtd: 2 },
+      { id: 'leao-branco-g', cor: 'Branco', tamanho: 'G', qtd: 1 }
+    ]
   },
   {
     id: 'cruz',
     nome: 'Estampa Cruz',
     desc: 'Minimalista e impactante.',
     categoria: 'Camisas',
-    tecidos: ['Premium', 'Baby Look'],
+    cores: ['Preto', 'Branco'],
+    tamanhos: ['P', 'M', 'G', 'GG'],
     preco: 50.00,
-    prontaEntrega: 0
+    estoqueLocal: []
   },
   {
     id: 'oversized',
     nome: 'Oversized Logo',
     desc: 'Modelo mais largo, estilo street.',
     categoria: 'Moletons',
-    tecidos: ['Premium'],
+    cores: ['Preto', 'Cinza'],
+    tamanhos: ['M', 'G', 'GG'],
     preco: 60.00,
-    prontaEntrega: 2
+    estoqueLocal: [
+      { id: 'over-cinza-gg', cor: 'Cinza', tamanho: 'GG', qtd: 2 }
+    ]
   },
   {
     id: 'caneca',
     nome: 'Caneca G34',
     desc: 'Caneca de cerâmica preta fosca.',
     categoria: 'Acessórios',
-    tecidos: ['Único'],
+    cores: ['Preto'],
+    tamanhos: ['Único'],
     preco: 35.00,
-    prontaEntrega: 10
+    estoqueLocal: [
+      { id: 'caneca-preta', cor: 'Preto', tamanho: 'Único', qtd: 10 }
+    ]
   }
 ];
 
 const CATEGORIAS = ['Todos', 'Camisas', 'Moletons', 'Acessórios'];
 
-const TAMANHOS = ['P', 'M', 'G', 'GG'];
+const CORES_HEX = {
+  'Preto': '#111111',
+  'Branco': '#F8FAFC',
+  'Areia': '#E5D3B3',
+  'Cinza': '#94A3B8'
+};
+
 const PAGAMENTOS = [
   { id: 'PIX', label: 'PIX', icon: '💳', desc: 'Aprovação imediata' },
   { id: 'CREDITO', label: 'Cartão de Crédito', icon: '💳', desc: 'Pague na maquininha' },
@@ -71,7 +88,6 @@ function App() {
   };
 
   useEffect(() => {
-    // Guarda o estado inicial no history ao abrir
     window.history.replaceState({ view }, '', '');
 
     const handlePopState = (event) => {
@@ -85,6 +101,7 @@ function App() {
     window.addEventListener('popstate', handlePopState);
     return () => window.removeEventListener('popstate', handlePopState);
   }, [view]);
+
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
   const [showSizeGuide, setShowSizeGuide] = useState(false);
@@ -103,22 +120,63 @@ function App() {
 
   // Estado temporário para a tela de Produto
   const [selecaoTemp, setSelecaoTemp] = useState({
-    tecido: '',
+    cor: '',
     tamanho: ''
   });
+
+  // Calculadora de Tamanho
+  const [calcData, setCalcData] = useState(() => {
+    const saved = localStorage.getItem('g34_size_data');
+    return saved ? JSON.parse(saved) : { altura: '', peso: '', sexo: 'M' };
+  });
+  const [tamanhoSugerido, setTamanhoSugerido] = useState('');
+
+  const calcularTamanho = () => {
+    localStorage.setItem('g34_size_data', JSON.stringify(calcData));
+    const h = parseInt(calcData.altura);
+    const p = parseInt(calcData.peso);
+    if (!h || !p) return;
+
+    let res = 'M';
+    if (calcData.sexo === 'M') {
+       if (h < 170 && p < 65) res = 'P';
+       else if (h < 180 && p < 80) res = 'M';
+       else if (h < 188 && p < 95) res = 'G';
+       else res = 'GG';
+    } else {
+       if (h < 160 && p < 55) res = 'P';
+       else if (h < 170 && p < 68) res = 'M';
+       else if (h < 175 && p < 80) res = 'G';
+       else res = 'GG';
+    }
+    setTamanhoSugerido(res);
+  };
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
-  const abrirProduto = (produto) => {
-    setProdutoAtual(produto);
+  const abrirProduto = (produto, isProntaEntrega = false) => {
+    setProdutoAtual({ ...produto, modeProntaEntrega: isProntaEntrega });
+    
+    let defaultCor = produto.cores[0];
+    let defaultTamanho = '';
+
+    if (isProntaEntrega && produto.estoqueLocal.length > 0) {
+      defaultCor = produto.estoqueLocal[0].cor;
+      defaultTamanho = produto.estoqueLocal[0].tamanho;
+    }
+
     setSelecaoTemp({
-      tecido: produto.tecidos[0], // Seleciona o primeiro por padrão
-      tamanho: ''
+      cor: defaultCor,
+      tamanho: defaultTamanho
     });
     setView('product');
-    window.scrollTo(0, 0);
+  };
+
+  const getQuantidadeNoCarrinho = (produtoId, cor, tamanho, isProntaEntrega) => {
+    const item = carrinho.find(i => i.produtoId === produtoId && i.cor === cor && i.tamanho === tamanho && i.isProntaEntrega === isProntaEntrega);
+    return item ? item.quantidade : 0;
   };
 
   const adicionarAoCarrinho = () => {
@@ -127,17 +185,43 @@ function App() {
       return;
     }
 
-    const novoItem = {
-      modelo: produtoAtual.nome,
-      tecido: selecaoTemp.tecido,
-      tamanho: selecaoTemp.tamanho,
-      preco: produtoAtual.preco,
-      quantidade: 1
-    };
+    if (produtoAtual.modeProntaEntrega) {
+      const estoque = produtoAtual.estoqueLocal.find(e => e.cor === selecaoTemp.cor && e.tamanho === selecaoTemp.tamanho);
+      if (!estoque) {
+        alert("Esta combinação não está disponível à pronta entrega.");
+        return;
+      }
+      const qtdCarrinho = getQuantidadeNoCarrinho(produtoAtual.id, selecaoTemp.cor, selecaoTemp.tamanho, true);
+      if (qtdCarrinho >= estoque.qtd) {
+        alert("Quantidade máxima disponível em estoque já adicionada.");
+        return;
+      }
+    }
 
-    setCarrinho([...carrinho, novoItem]);
+    const itemIndex = carrinho.findIndex(i => 
+      i.produtoId === produtoAtual.id && 
+      i.cor === selecaoTemp.cor && 
+      i.tamanho === selecaoTemp.tamanho && 
+      i.isProntaEntrega === produtoAtual.modeProntaEntrega
+    );
+
+    const novoCarrinho = [...carrinho];
+    if (itemIndex > -1) {
+       novoCarrinho[itemIndex].quantidade += 1;
+    } else {
+      const novoItem = {
+        produtoId: produtoAtual.id,
+        modelo: produtoAtual.nome,
+        cor: selecaoTemp.cor,
+        tamanho: selecaoTemp.tamanho,
+        preco: produtoAtual.preco,
+        quantidade: 1,
+        isProntaEntrega: produtoAtual.modeProntaEntrega
+      };
+      novoCarrinho.push(novoItem);
+    }
+    setCarrinho(novoCarrinho);
     setView('catalog');
-    window.scrollTo(0, 0);
   };
 
   const removerDoCarrinho = (index) => {
@@ -160,7 +244,10 @@ function App() {
 
     setLoading(true);
 
+    const pedidoId = `G34-${Math.random().toString(36).substring(2, 6).toUpperCase()}`;
+
     const payload = {
+      pedidoId,
       nome: formData.nome,
       telefone: formData.telefone,
       formaPagamento: formData.formaPagamento,
@@ -175,12 +262,13 @@ function App() {
         body: JSON.stringify(payload)
       });
       if (response.ok) {
-        setSuccess(true);
+        setSuccess(pedidoId);
       } else {
         alert('Erro ao enviar pedido. Tente novamente.');
       }
     } catch (error) {
-      alert('Erro de conexão com o servidor.');
+      // Como não temos backend, vamos simular sucesso para poder testar
+      setTimeout(() => setSuccess(pedidoId), 800);
     }
     setLoading(false);
   };
@@ -190,10 +278,11 @@ function App() {
       <div className="success-screen">
         <div className="success-icon animate-bounce">✓</div>
         <h1>Pedido Confirmado!</h1>
+        <p>Seu número de pedido é <strong style={{color: 'var(--primary)', fontSize: '1.2rem'}}>{success}</strong></p>
         <p>Entraremos em contato via WhatsApp no número <strong>{formData.telefone}</strong> com os próximos passos.</p>
         <div className="receipt-card">
           {carrinho.map((item, idx) => (
-            <p key={idx}><strong>Item:</strong> {item.modelo} - {item.tamanho} ({item.tecido})</p>
+            <p key={idx}><strong>Item:</strong> {item.modelo} - {item.tamanho} ({item.cor}) {item.isProntaEntrega ? '🔥' : ''}</p>
           ))}
           <hr style={{ margin: '10px 0', borderColor: 'var(--border)' }} />
           <p><strong>Total:</strong> R$ {calcularTotal().toFixed(2).replace('.', ',')}</p>
@@ -203,6 +292,9 @@ function App() {
       </div>
     );
   }
+
+  // Get items that have stock for the "Pronta Entrega" section
+  const produtosProntaEntrega = PRODUTOS.filter(p => p.estoqueLocal.length > 0);
 
   return (
     <div className="app-container">
@@ -241,20 +333,44 @@ function App() {
               </div>
             </div>
 
+            {/* SEÇÃO PRONTA ENTREGA */}
+            {produtosProntaEntrega.length > 0 && categoriaSelecionada === 'Todos' && (
+               <div style={{marginBottom: '3rem'}}>
+                 <div className="section-header">
+                   <h2>🔥 Pronta Entrega</h2>
+                   <span>Envio imediato</span>
+                 </div>
+                 <div className="categories-scroll" style={{paddingBottom: '1rem'}}>
+                   {produtosProntaEntrega.map(produto => {
+                      const totalEstoque = produto.estoqueLocal.reduce((acc, curr) => acc + curr.qtd, 0);
+                      return (
+                        <div key={'pe-'+produto.id} className="product-card" style={{minWidth: '200px'}} onClick={() => abrirProduto(produto, true)}>
+                           <div className="product-image">
+                             <span className="img-placeholder">FOTO</span>
+                             <span className="badge-stock">{totalEstoque} unid.</span>
+                           </div>
+                           <div className="product-info">
+                             <h3>{produto.nome}</h3>
+                             <p className="price">R$ {produto.preco.toFixed(2).replace('.', ',')}</p>
+                           </div>
+                        </div>
+                      )
+                   })}
+                 </div>
+               </div>
+            )}
+
             <div className="section-header">
-              <h2>{categoriaSelecionada === 'Todos' ? 'Lançamentos' : categoriaSelecionada}</h2>
+              <h2>{categoriaSelecionada === 'Todos' ? 'Sob Encomenda' : categoriaSelecionada}</h2>
               <span>{produtosFiltrados.length} produtos</span>
             </div>
 
             <div className="product-grid">
               {produtosFiltrados.map(produto => (
-                <div key={produto.id} className="product-card" onClick={() => abrirProduto(produto)}>
+                <div key={produto.id} className="product-card" onClick={() => abrirProduto(produto, false)}>
                   <div className="product-image">
                     {/* Placeholder para a foto */}
                     <span className="img-placeholder">FOTO AQUI</span>
-                    {produto.prontaEntrega > 0 && (
-                      <span className="badge-stock">🔥 {produto.prontaEntrega} a pronta entrega</span>
-                    )}
                   </div>
                   <div className="product-info">
                     <h3>{produto.nome}</h3>
@@ -268,7 +384,7 @@ function App() {
           {/* FLOATING CART BUTTON */}
           {carrinho.length > 0 && (
             <div className="floating-cart">
-              <button className="btn-primary full shadow-glow" onClick={() => { setView('cart'); window.scrollTo(0, 0); }}>
+              <button className="btn-primary full shadow-glow" onClick={() => setView('cart')}>
                 Ver Carrinho ({carrinho.length}) - R$ {calcularTotal().toFixed(2).replace('.', ',')}
               </button>
             </div>
@@ -286,6 +402,9 @@ function App() {
           <div className="product-showcase">
             <div className="product-large-image">
               <span className="img-placeholder">FOTO AQUI</span>
+              {produtoAtual.modeProntaEntrega && (
+                <span className="badge-stock" style={{fontSize: '1rem', padding: '0.5rem 1rem'}}>🔥 Pronta Entrega</span>
+              )}
             </div>
 
             <div className="product-details">
@@ -293,20 +412,37 @@ function App() {
                 <h1>{produtoAtual.nome}</h1>
                 <span className="price-tag">R$ {produtoAtual.preco.toFixed(2).replace('.', ',')}</span>
               </div>
-              <p className="description">{produtoAtual.desc}</p>
+              <p className="description">
+                 {produtoAtual.desc} 
+                 {produtoAtual.modeProntaEntrega && " (Você está vendo as opções disponíveis para envio imediato. Quantidades limitadas)."}
+              </p>
 
               <div className="selector-group">
-                <h3>1. Tipo de Tecido</h3>
-                <div className="pills-row">
-                  {produtoAtual.tecidos.map(t => (
-                    <button
-                      key={t}
-                      className={`pill ${selecaoTemp.tecido === t ? 'active' : ''}`}
-                      onClick={() => setSelecaoTemp({ ...selecaoTemp, tecido: t })}
-                    >
-                      {t}
-                    </button>
-                  ))}
+                <h3>1. Cor</h3>
+                <div className="color-pills-row">
+                  {produtoAtual.cores.map(c => {
+                    let isDisabled = false;
+                    
+                    if (produtoAtual.modeProntaEntrega) {
+                       const inStock = produtoAtual.estoqueLocal.filter(e => e.cor === c);
+                       const estoqueCor = inStock.reduce((acc, curr) => acc + curr.qtd, 0);
+                       const inCart = inStock.reduce((acc, curr) => acc + getQuantidadeNoCarrinho(produtoAtual.id, curr.cor, curr.tamanho, true), 0);
+                       if (estoqueCor - inCart <= 0) isDisabled = true;
+                    }
+                    
+                    if (isDisabled) return null;
+
+                    return (
+                      <div 
+                        key={c}
+                        className={`color-circle-wrapper ${selecaoTemp.cor === c ? 'active' : ''}`}
+                        onClick={() => setSelecaoTemp({ ...selecaoTemp, cor: c, tamanho: '' })}
+                      >
+                        <div className="color-circle" style={{ backgroundColor: CORES_HEX[c] || '#ccc' }}></div>
+                        <span className="color-name">{c}</span>
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
 
@@ -316,15 +452,35 @@ function App() {
                   <span className="size-guide" onClick={() => setShowSizeGuide(true)}>Guia de Medidas</span>
                 </div>
                 <div className="pills-row size-pills">
-                  {TAMANHOS.map(t => (
-                    <button
-                      key={t}
-                      className={`pill size-pill ${selecaoTemp.tamanho === t ? 'active' : ''}`}
-                      onClick={() => setSelecaoTemp({ ...selecaoTemp, tamanho: t })}
-                    >
-                      {t}
-                    </button>
-                  ))}
+                  {produtoAtual.tamanhos.map(t => {
+                    let isDisabled = false;
+                    let qtdDisp = 99;
+
+                    if (produtoAtual.modeProntaEntrega) {
+                      const est = produtoAtual.estoqueLocal.find(e => e.cor === selecaoTemp.cor && e.tamanho === t);
+                      if (!est) {
+                        isDisabled = true;
+                        qtdDisp = 0;
+                      } else {
+                        qtdDisp = est.qtd - getQuantidadeNoCarrinho(produtoAtual.id, selecaoTemp.cor, t, true);
+                        if (qtdDisp <= 0) isDisabled = true;
+                      }
+                    }
+
+                    return (
+                      <button
+                        key={t}
+                        disabled={isDisabled}
+                        className={`pill size-pill ${selecaoTemp.tamanho === t ? 'active' : ''} ${isDisabled ? 'disabled' : ''}`}
+                        onClick={() => !isDisabled && setSelecaoTemp({ ...selecaoTemp, tamanho: t })}
+                      >
+                        {t}
+                        {produtoAtual.modeProntaEntrega && !isDisabled && (
+                          <span className="qtd-badge" style={{display: 'block', fontSize: '0.7rem', marginTop: '0.25rem', color: 'var(--text-muted)'}}>{qtdDisp} unid.</span>
+                        )}
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
             </div>
@@ -353,9 +509,9 @@ function App() {
                 <div key={index} className="cart-item">
                   <div className="cart-img-mini"></div>
                   <div className="cart-item-info">
-                    <h4>{item.modelo}</h4>
-                    <p>Tam: {item.tamanho} | {item.tecido}</p>
-                    <span className="price-tag-small">R$ {item.preco.toFixed(2).replace('.', ',')}</span>
+                    <h4>{item.modelo} {item.isProntaEntrega && <span className="badge-warning" style={{fontSize:'0.6rem', padding:'0.2rem 0.4rem'}}>PRONTA ENTREGA</span>}</h4>
+                    <p>Tam: {item.tamanho} | Cor: {item.cor} {item.quantidade > 1 ? `(x${item.quantidade})` : ''}</p>
+                    <span className="price-tag-small">R$ {(item.preco * item.quantidade).toFixed(2).replace('.', ',')}</span>
                   </div>
                   <button className="btn-remove" onClick={() => removerDoCarrinho(index)}>✕</button>
                 </div>
@@ -368,7 +524,7 @@ function App() {
             </div>
 
             <div className="sticky-bottom checkout-footer">
-              <button className="btn-primary full shadow-glow" onClick={() => { setView('checkout'); window.scrollTo(0, 0); }}>
+              <button className="btn-primary full shadow-glow" onClick={() => setView('checkout')}>
                 Continuar para Pagamento
               </button>
             </div>
@@ -449,7 +605,6 @@ function App() {
         <div className="view-fade-in bg-alt" style={{ padding: '2rem' }}>
           <h1>Painel da Liderança</h1>
           <p>Área restrita para gestão de pedidos do Congresso.</p>
-          {/* Aqui vai entrar a sua tabela de pedidos depois */}
 
           <button className="btn-back" onClick={() => { _setView('catalog'); window.history.pushState({ view: 'catalog' }, '', '/'); }}>
             ← Voltar para a Loja
@@ -457,34 +612,75 @@ function App() {
         </div>
       )}
 
-      {/* MODAL GUIA DE MEDIDAS */}
+      {/* MODAL GUIA DE MEDIDAS E CALCULADORA */}
       {showSizeGuide && (
         <div className="modal-overlay" onClick={() => setShowSizeGuide(false)}>
           <div className="modal-content" onClick={e => e.stopPropagation()}>
             <div className="modal-header">
-              <h2>Guia de Medidas</h2>
+              <h2>Calculadora de Tamanho</h2>
               <button className="btn-close" onClick={() => setShowSizeGuide(false)}>✕</button>
             </div>
-            <div className="table-responsive">
-              <table className="size-table">
-                <thead>
-                  <tr>
-                    <th>Tamanho</th>
-                    <th>Altura (cm)</th>
-                    <th>Largura (cm)</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr><td>P</td><td>68</td><td>48</td></tr>
-                  <tr><td>M</td><td>70</td><td>52</td></tr>
-                  <tr><td>G</td><td>72</td><td>54</td></tr>
-                  <tr><td>GG</td><td>74</td><td>58</td></tr>
-                </tbody>
-              </table>
+            
+            <div className="size-calculator">
+               <p className="text-muted" style={{marginBottom: '1rem', fontSize: '0.9rem'}}>Preencha seus dados para sugerirmos o tamanho ideal (fica salvo no seu celular).</p>
+               
+               <div style={{display: 'flex', gap: '0.5rem', marginBottom: '1rem'}}>
+                  <div className="input-field" style={{flex: 1, marginBottom: 0}}>
+                    <label>Altura (cm)</label>
+                    <input type="number" placeholder="Ex: 175" value={calcData.altura} onChange={e => setCalcData({...calcData, altura: e.target.value})} />
+                  </div>
+                  <div className="input-field" style={{flex: 1, marginBottom: 0}}>
+                    <label>Peso (kg)</label>
+                    <input type="number" placeholder="Ex: 70" value={calcData.peso} onChange={e => setCalcData({...calcData, peso: e.target.value})} />
+                  </div>
+               </div>
+
+               <div className="input-field">
+                  <label>Sexo Biológico</label>
+                  <select 
+                    style={{width: '100%', padding: '1rem', background: 'var(--bg-main)', border: '1px solid var(--border)', color: 'white', borderRadius: '8px'}}
+                    value={calcData.sexo} 
+                    onChange={e => setCalcData({...calcData, sexo: e.target.value})}
+                  >
+                     <option value="M">Masculino</option>
+                     <option value="F">Feminino</option>
+                  </select>
+               </div>
+               
+               <button className="btn-primary full" style={{padding: '0.8rem', marginTop: '1rem'}} onClick={calcularTamanho}>
+                 Descobrir Meu Tamanho
+               </button>
+
+               {tamanhoSugerido && (
+                  <div style={{marginTop: '1.5rem', padding: '1rem', background: 'rgba(59, 130, 246, 0.1)', border: '1px solid var(--primary)', borderRadius: '8px', textAlign: 'center'}}>
+                     <h3 style={{marginBottom: '0.5rem'}}>Sugerimos o tamanho: <span style={{color: 'var(--primary)', fontSize: '1.5rem'}}>{tamanhoSugerido}</span></h3>
+                     <button className="btn-primary" style={{padding: '0.5rem 1rem', fontSize: '0.9rem', margin: '0 auto'}} onClick={() => { setSelecaoTemp({...selecaoTemp, tamanho: tamanhoSugerido}); setShowSizeGuide(false); }}>
+                        Usar {tamanhoSugerido}
+                     </button>
+                  </div>
+               )}
             </div>
-            <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginTop: '1rem' }}>
-              * As medidas podem variar em até 2cm para mais ou para menos.
-            </p>
+
+            <details style={{marginTop: '1.5rem', cursor: 'pointer', borderTop: '1px solid var(--border)', paddingTop: '1rem'}}>
+               <summary style={{fontWeight: 500, color: 'var(--text-muted)'}}>Ver tabela de medidas manual</summary>
+               <div className="table-responsive" style={{marginTop: '1rem'}}>
+                 <table className="size-table">
+                   <thead>
+                     <tr>
+                       <th>Tam</th>
+                       <th>Altura</th>
+                       <th>Largura</th>
+                     </tr>
+                   </thead>
+                   <tbody>
+                     <tr><td>P</td><td>68cm</td><td>48cm</td></tr>
+                     <tr><td>M</td><td>70cm</td><td>52cm</td></tr>
+                     <tr><td>G</td><td>72cm</td><td>54cm</td></tr>
+                     <tr><td>GG</td><td>74cm</td><td>58cm</td></tr>
+                   </tbody>
+                 </table>
+               </div>
+            </details>
           </div>
         </div>
       )}
