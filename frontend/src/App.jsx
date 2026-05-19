@@ -263,8 +263,6 @@ function App() {
     );
   }
 
-  // Get items that have stock for the "Pronta Entrega" section
-  const produtosProntaEntrega = PRODUTOS.filter(p => p.estoqueLocal.length > 0);
 
   return (
     <div className="app-container">
