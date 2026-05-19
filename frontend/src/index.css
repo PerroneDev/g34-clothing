@@ -42,8 +42,8 @@ body {
   to { opacity: 1; transform: translateY(0); }
 }
 
-.view-fade-in { animation: fadeIn 0.4s ease-out; }
-.view-slide-up { animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1); min-height: 100vh; background: var(--bg-main); }
+.view-fade-in { animation: fadeIn 0.4s ease-out; position: relative; }
+.view-slide-up { animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1); min-height: 100vh; background: var(--bg-main); position: relative; }
 .bg-alt { background: var(--bg-surface); }
 
 /* Layout Structure */
