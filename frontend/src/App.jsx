@@ -129,7 +129,7 @@ function App() {
   const abrirProduto = (produto, isProntaEntrega = false) => {
     setProdutoAtual({ ...produto, modeProntaEntrega: isProntaEntrega });
     
-    let defaultCor = produto.cores[0];
+    let defaultCor = produto.cores[0] ? (typeof produto.cores[0] === 'string' ? produto.cores[0] : produto.cores[0].nome) : '';
     let defaultTamanho = '';
 
     if (isProntaEntrega && produto.estoqueLocal.length > 0) {
@@ -397,7 +397,9 @@ function App() {
               <div className="selector-group">
                 <h3>1. Cor</h3>
                 <div className="color-pills-row">
-                  {produtoAtual.cores.map(c => {
+                  {produtoAtual.cores.map(corObj => {
+                    const c = typeof corObj === 'string' ? corObj : corObj.nome;
+                    const hexCor = typeof corObj === 'string' ? (CORES_HEX[c] || '#ccc') : corObj.hex;
                     let isDisabled = false;
                     
                     if (produtoAtual.modeProntaEntrega) {
@@ -415,7 +417,7 @@ function App() {
                         className={`color-circle-wrapper ${selecaoTemp.cor === c ? 'active' : ''}`}
                         onClick={() => setSelecaoTemp({ ...selecaoTemp, cor: c, tamanho: '' })}
                       >
-                        <div className="color-circle" style={{ backgroundColor: CORES_HEX[c] || '#ccc' }}></div>
+                        <div className="color-circle" style={{ backgroundColor: hexCor }}></div>
                         <span className="color-name">{c}</span>
                       </div>
                     );

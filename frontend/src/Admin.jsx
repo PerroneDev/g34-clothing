@@ -4,13 +4,16 @@ import { QRCodeSVG } from 'qrcode.react';
 import { CheckCircle, Clock, LogOut, Trash2, LayoutDashboard, Scissors, Package, CheckCheck, Send, MessageSquare, Store, Plus } from 'lucide-react';
 import './index.css';
 
+const OPCOES_TAMANHOS = ['P', 'M', 'G', 'GG', 'XG', '2 anos', '4 anos', '6 anos', '8 anos', '10 anos', '12 anos', '14 anos', '16 anos', 'Único'];
+
 function Admin() {
   const [token, setToken] = useState(localStorage.getItem('adminToken'));
   const [user, setUser] = useState(JSON.parse(localStorage.getItem('adminUser')));
   const [pedidos, setPedidos] = useState([]);
   const [produtos, setProdutos] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [novoProduto, setNovoProduto] = useState({ nome: '', desc: '', categoria: 'Camisas', preco: '', cores: '', tamanhos: '' });
+  const [novoProduto, setNovoProduto] = useState({ nome: '', desc: '', categoria: 'Camisas', preco: '', cores: [], tamanhos: [] });
+  const [novaCor, setNovaCor] = useState({ nome: '', hex: '#000000' });
   
   // Controle de Abas: 'dashboard' ou 'producao'
   const [activeTab, setActiveTab] = useState('dashboard');
@@ -104,14 +107,37 @@ function Admin() {
     }
   };
 
+  const toggleTamanho = (tam) => {
+      setNovoProduto(prev => {
+          const tamanhos = prev.tamanhos.includes(tam) 
+              ? prev.tamanhos.filter(t => t !== tam)
+              : [...prev.tamanhos, tam];
+          return { ...prev, tamanhos };
+      });
+  };
+
+  const adicionarCor = () => {
+      if (!novaCor.nome || !novaCor.hex) return;
+      setNovoProduto(prev => ({
+          ...prev,
+          cores: [...prev.cores, novaCor]
+      }));
+      setNovaCor({ nome: '', hex: '#000000' });
+  };
+
+  const removerCor = (index) => {
+      setNovoProduto(prev => ({
+          ...prev,
+          cores: prev.cores.filter((_, i) => i !== index)
+      }));
+  };
+
   const salvarProduto = async () => {
     if (!novoProduto.nome || !novoProduto.preco) return alert('Preencha nome e preço.');
     
     const payload = {
         ...novoProduto,
-        preco: parseFloat(novoProduto.preco),
-        cores: novoProduto.cores.split(',').map(c => c.trim()).filter(c => c),
-        tamanhos: novoProduto.tamanhos.split(',').map(t => t.trim().toUpperCase()).filter(t => t)
+        preco: parseFloat(novoProduto.preco)
     };
 
     try {
@@ -122,7 +148,7 @@ function Admin() {
       });
       if (res.ok) {
         carregarProdutos();
-        setNovoProduto({ nome: '', desc: '', categoria: 'Camisas', preco: '', cores: '', tamanhos: '' });
+        setNovoProduto({ nome: '', desc: '', categoria: 'Camisas', preco: '', cores: [], tamanhos: [] });
         alert('Produto salvo com sucesso!');
       } else {
         alert('Erro ao salvar produto.');
@@ -510,13 +536,41 @@ function Admin() {
                     <label>Descrição Opcional</label>
                     <input type="text" value={novoProduto.desc} onChange={e => setNovoProduto({...novoProduto, desc: e.target.value})} placeholder="Ex: 100% algodão" />
                  </div>
-                 <div className="input-field">
-                    <label>Cores (separadas por vírgula)</label>
-                    <input type="text" value={novoProduto.cores} onChange={e => setNovoProduto({...novoProduto, cores: e.target.value})} placeholder="Ex: Preto, Branco" />
+                 <div className="input-field" style={{ gridColumn: '1 / -1' }}>
+                    <label>Cores</label>
+                    <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1rem', alignItems: 'center' }}>
+                       <input type="text" value={novaCor.nome} onChange={e => setNovaCor({...novaCor, nome: e.target.value})} placeholder="Nome da Cor (ex: Preto)" style={{ flex: 1 }} />
+                       <input type="color" value={novaCor.hex} onChange={e => setNovaCor({...novaCor, hex: e.target.value})} style={{ width: '50px', height: '38px', padding: '0', cursor: 'pointer', background: 'none', border: 'none' }} title="Escolha a cor" />
+                       <input type="text" value={novaCor.hex} onChange={e => setNovaCor({...novaCor, hex: e.target.value})} placeholder="#000000" style={{ width: '100px' }} />
+                       <button className="btn-approve" onClick={adicionarCor} style={{ background: 'var(--primary)' }}>+ Adicionar Cor</button>
+                    </div>
+                    {novoProduto.cores.length > 0 && (
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
+                           {novoProduto.cores.map((c, i) => (
+                               <div key={i} style={{ display: 'flex', alignItems: 'center', background: 'var(--bg-surface)', padding: '0.3rem 0.6rem', borderRadius: '4px', border: '1px solid var(--border)', fontSize: '0.85rem' }}>
+                                   <div style={{ width: '12px', height: '12px', borderRadius: '50%', backgroundColor: c.hex, marginRight: '0.5rem' }}></div>
+                                   {c.nome} ({c.hex})
+                                   <button className="btn-logout" onClick={() => removerCor(i)} style={{ marginLeft: '0.5rem', padding: '2px' }}><Trash2 size={12}/></button>
+                               </div>
+                           ))}
+                        </div>
+                    )}
                  </div>
-                 <div className="input-field">
-                    <label>Tamanhos (separados por vírgula)</label>
-                    <input type="text" value={novoProduto.tamanhos} onChange={e => setNovoProduto({...novoProduto, tamanhos: e.target.value})} placeholder="Ex: P, M, G" />
+                 <div className="input-field" style={{ gridColumn: '1 / -1' }}>
+                    <label>Tamanhos</label>
+                    <div style={{display: 'flex', flexWrap: 'wrap', gap: '0.5rem'}}>
+                        {OPCOES_TAMANHOS.map(tam => (
+                            <button 
+                                key={tam}
+                                type="button"
+                                className={`pill size-pill ${novoProduto.tamanhos.includes(tam) ? 'active' : ''}`}
+                                onClick={() => toggleTamanho(tam)}
+                                style={{ margin: 0, padding: '0.5rem 1rem', fontSize: '0.85rem' }}
+                            >
+                                {tam}
+                            </button>
+                        ))}
+                    </div>
                  </div>
                </div>
                <button className="btn-primary" style={{marginTop: '1.5rem'}} onClick={salvarProduto}>
@@ -547,7 +601,7 @@ function Admin() {
                       <td>R$ {p.preco?.toFixed(2).replace('.', ',')}</td>
                       <td>
                         <div style={{fontSize: '0.85rem', color: 'var(--text-muted)'}}>
-                          Cores: {p.cores?.join(', ') || 'N/A'}<br/>
+                          Cores: {p.cores?.map(c => typeof c === 'string' ? c : c.nome).join(', ') || 'N/A'}<br/>
                           Tam: {p.tamanhos?.join(', ') || 'N/A'}
                         </div>
                       </td>

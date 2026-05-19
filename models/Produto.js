@@ -12,7 +12,10 @@ const produtoSchema = new mongoose.Schema({
     desc: { type: String },
     categoria: { type: String, required: true },
     preco: { type: Number, required: true },
-    cores: [{ type: String }],
+    cores: [{
+        nome: { type: String, required: true },
+        hex: { type: String, required: true }
+    }],
     tamanhos: [{ type: String }],
     estoqueLocal: [estoqueLocalSchema]
 });
