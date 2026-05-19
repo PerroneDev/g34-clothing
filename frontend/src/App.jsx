@@ -91,6 +91,7 @@ function App() {
   // Estado temporário para a tela de Produto
   const [selecaoTemp, setSelecaoTemp] = useState({
     cor: '',
+    tipoModelo: 'Padrão',
     tamanho: ''
   });
 
@@ -137,8 +138,10 @@ function App() {
       defaultTamanho = produto.estoqueLocal[0].tamanho;
     }
 
+    const hasAdultSizes = produto.tamanhos && produto.tamanhos.some(t => !['2 anos', '4 anos', '6 anos', '8 anos', '10 anos', '12 anos', '14 anos', '16 anos'].includes(t));
     setSelecaoTemp({
       cor: defaultCor,
+      tipoModelo: hasAdultSizes ? 'Padrão' : 'Infantil',
       tamanho: defaultTamanho
     });
     setView('product');
@@ -172,6 +175,7 @@ function App() {
       i.produtoId === produtoAtual.id && 
       i.cor === selecaoTemp.cor && 
       i.tamanho === selecaoTemp.tamanho && 
+      i.tipoModelo === selecaoTemp.tipoModelo &&
       i.isProntaEntrega === produtoAtual.modeProntaEntrega
     );
 
@@ -181,7 +185,9 @@ function App() {
     } else {
       const novoItem = {
         produtoId: produtoAtual.id,
-        modelo: produtoAtual.nome,
+        modelo: `${produtoAtual.nome} (${selecaoTemp.tipoModelo})`,
+        nomeProduto: produtoAtual.nome,
+        tipoModelo: selecaoTemp.tipoModelo,
         cor: selecaoTemp.cor,
         tamanho: selecaoTemp.tamanho,
         preco: produtoAtual.preco,
@@ -426,12 +432,33 @@ function App() {
               </div>
 
               <div className="selector-group">
+                <h3>2. Modelo da Camisa</h3>
+                <div className="pills-row size-pills">
+                  {['Padrão', 'Baby Look', 'Oversized', 'Infantil'].map(m => (
+                    <button
+                      key={m}
+                      className={`pill size-pill ${selecaoTemp.tipoModelo === m ? 'active' : ''}`}
+                      onClick={() => setSelecaoTemp({ ...selecaoTemp, tipoModelo: m, tamanho: '' })}
+                    >
+                      {m}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="selector-group">
                 <div className="title-row">
-                  <h3>2. Tamanho</h3>
+                  <h3>3. Tamanho</h3>
                   <span className="size-guide" onClick={() => setShowSizeGuide(true)}>Guia de Medidas</span>
                 </div>
                 <div className="pills-row size-pills">
-                  {produtoAtual.tamanhos.map(t => {
+                  {produtoAtual.tamanhos
+                    .filter(t => {
+                       const isInfantil = ['2 anos', '4 anos', '6 anos', '8 anos', '10 anos', '12 anos', '14 anos', '16 anos'].includes(t);
+                       if (selecaoTemp.tipoModelo === 'Infantil') return isInfantil;
+                       return !isInfantil;
+                    })
+                    .map(t => {
                     let isDisabled = false;
                     let qtdDisp = 99;
 
@@ -488,8 +515,8 @@ function App() {
                 <div key={index} className="cart-item">
                   <div className="cart-img-mini"></div>
                   <div className="cart-item-info">
-                    <h4>{item.modelo} {item.isProntaEntrega && <span className="badge-warning" style={{fontSize:'0.6rem', padding:'0.2rem 0.4rem'}}>PRONTA ENTREGA</span>}</h4>
-                    <p>Tam: {item.tamanho} | Cor: {item.cor} {item.quantidade > 1 ? `(x${item.quantidade})` : ''}</p>
+                    <h4>{item.nomeProduto} {item.isProntaEntrega && <span className="badge-warning" style={{fontSize:'0.6rem', padding:'0.2rem 0.4rem'}}>PRONTA ENTREGA</span>}</h4>
+                    <p>Mod: {item.tipoModelo} | Tam: {item.tamanho} | Cor: {item.cor} {item.quantidade > 1 ? `(x${item.quantidade})` : ''}</p>
                     <span className="price-tag-small">R$ {(item.preco * item.quantidade).toFixed(2).replace('.', ',')}</span>
                   </div>
                   <button className="btn-remove" onClick={() => removerDoCarrinho(index)}>✕</button>
