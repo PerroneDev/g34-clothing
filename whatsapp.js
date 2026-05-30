@@ -169,7 +169,8 @@ async function enviarMensagemPedido(pedido) {
 
         pedido.itens.forEach(item => {
             const extra = item.isProntaEntrega ? ' 🔥(Pronta Entrega)' : '';
-            mensagem += `- ${item.quantidade}x ${item.modelo} (${item.cor || item.tecido} | Tam: ${item.tamanho})${extra}\n`;
+            const descCor = (item.cor || item.tecido) ? `${item.cor || item.tecido} | ` : '';
+            mensagem += `- ${item.quantidade}x ${item.modelo} (${descCor}Tam: ${item.tamanho})${extra}\n`;
         });
 
         mensagem += `\n💰 *Valor Total: R$ ${pedido.valorTotal.toFixed(2).replace('.', ',')}*\n\n`;

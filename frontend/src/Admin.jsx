@@ -13,7 +13,7 @@ function Admin() {
   const [pedidos, setPedidos] = useState([]);
   const [produtos, setProdutos] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [novoProduto, setNovoProduto] = useState({ nome: '', desc: '', categoria: 'Camisas', preco: '', cores: [], tamanhos: [], modelos: [] });
+  const [novoProduto, setNovoProduto] = useState({ nome: '', desc: '', categoria: 'Camisas', preco: '', cores: [], tamanhos: [], modelos: [], precosModelos: {}, imagemCapa: '' });
   const [novaCor, setNovaCor] = useState({ nome: '', hex: '#000000' });
   
   // Controle de Abas: 'dashboard' ou 'producao'
@@ -119,11 +119,28 @@ function Admin() {
 
   const toggleModelo = (mod) => {
       setNovoProduto(prev => {
-          const modelos = prev.modelos?.includes(mod) 
+          const isRemoving = prev.modelos?.includes(mod);
+          const modelos = isRemoving 
               ? prev.modelos.filter(m => m !== mod)
               : [...(prev.modelos || []), mod];
-          return { ...prev, modelos };
+          
+          const precosModelos = { ...(prev.precosModelos || {}) };
+          if (isRemoving) {
+              delete precosModelos[mod];
+          }
+
+          return { ...prev, modelos, precosModelos };
       });
+  };
+
+  const setPrecoModelo = (mod, val) => {
+      setNovoProduto(prev => ({
+          ...prev,
+          precosModelos: {
+              ...(prev.precosModelos || {}),
+              [mod]: val
+          }
+      }));
   };
 
   const adicionarCor = () => {
@@ -158,7 +175,7 @@ function Admin() {
       });
       if (res.ok) {
         carregarProdutos();
-        setNovoProduto({ nome: '', desc: '', categoria: 'Camisas', preco: '', cores: [], tamanhos: [], modelos: [] });
+        setNovoProduto({ nome: '', desc: '', categoria: 'Camisas', preco: '', cores: [], tamanhos: [], modelos: [], precosModelos: {}, imagemCapa: '' });
         alert('Produto salvo com sucesso!');
       } else {
         alert('Erro ao salvar produto.');
@@ -543,6 +560,10 @@ function Admin() {
                     </select>
                  </div>
                  <div className="input-field">
+                    <label>Imagem da Capa (Opcional)</label>
+                    <input type="text" value={novoProduto.imagemCapa || ''} onChange={e => setNovoProduto({...novoProduto, imagemCapa: e.target.value})} placeholder="Ex: camisa-preta.png" />
+                 </div>
+                 <div className="input-field" style={{ gridColumn: '1 / -1' }}>
                     <label>Descrição Opcional</label>
                     <input type="text" value={novoProduto.desc} onChange={e => setNovoProduto({...novoProduto, desc: e.target.value})} placeholder="Ex: 100% algodão" />
                  </div>
@@ -567,19 +588,38 @@ function Admin() {
                     )}
                  </div>
                  <div className="input-field" style={{ gridColumn: '1 / -1' }}>
-                    <label>Modelos Disponíveis</label>
-                    <div style={{display: 'flex', flexWrap: 'wrap', gap: '0.5rem'}}>
-                        {OPCOES_MODELOS.map(mod => (
-                            <button 
-                                key={mod}
-                                type="button"
-                                className={`pill size-pill ${(novoProduto.modelos || []).includes(mod) ? 'active' : ''}`}
-                                onClick={() => toggleModelo(mod)}
-                                style={{ margin: 0, padding: '0.5rem 1rem', fontSize: '0.85rem' }}
-                            >
-                                {mod}
-                            </button>
-                        ))}
+                    <label>Modelos Disponíveis e Preços Customizados</label>
+                    <div style={{display: 'flex', flexDirection: 'column', gap: '0.5rem'}}>
+                        <div style={{display: 'flex', flexWrap: 'wrap', gap: '0.5rem'}}>
+                            {OPCOES_MODELOS.map(mod => (
+                                <button 
+                                    key={mod}
+                                    type="button"
+                                    className={`pill size-pill ${(novoProduto.modelos || []).includes(mod) ? 'active' : ''}`}
+                                    onClick={() => toggleModelo(mod)}
+                                    style={{ margin: 0, padding: '0.5rem 1rem', fontSize: '0.85rem' }}
+                                >
+                                    {mod}
+                                </button>
+                            ))}
+                        </div>
+                        
+                        {(novoProduto.modelos && novoProduto.modelos.length > 0) && (
+                            <div style={{display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem', marginTop: '1rem', background: 'var(--bg-main)', padding: '1rem', borderRadius: '8px'}}>
+                                {novoProduto.modelos.map(mod => (
+                                    <div key={'preco-'+mod} className="input-field" style={{marginBottom: 0}}>
+                                        <label style={{fontSize: '0.8rem'}}>Preço: {mod} (R$)</label>
+                                        <input 
+                                            type="number" 
+                                            value={(novoProduto.precosModelos && novoProduto.precosModelos[mod]) || ''} 
+                                            onChange={e => setPrecoModelo(mod, e.target.value)} 
+                                            placeholder={`Ex: ${novoProduto.preco || '50.00'}`} 
+                                            style={{padding: '0.5rem', fontSize: '0.9rem'}}
+                                        />
+                                    </div>
+                                ))}
+                            </div>
+                        )}
                     </div>
                  </div>
                  <div className="input-field" style={{ gridColumn: '1 / -1' }}>

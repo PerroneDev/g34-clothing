@@ -16,6 +16,16 @@ const PAGAMENTOS = [
   { id: 'DINHEIRO', label: 'Dinheiro', icon: '💵', desc: 'Pague presencialmente' }
 ];
 
+const OPCOES_TAMANHOS_ORDEM = ['P', 'M', 'G', 'GG', 'XG', '2 anos', '4 anos', '6 anos', '8 anos', '10 anos', '12 anos', '14 anos', '16 anos', 'Único'];
+
+const getPrecoCalculado = (produto, tipoModelo) => {
+  if (!tipoModelo) return produto.preco;
+  if (produto.precosModelos && produto.precosModelos[tipoModelo]) {
+    return parseFloat(produto.precosModelos[tipoModelo]);
+  }
+  return produto.preco;
+};
+
 function App() {
   const [categoriaSelecionada, setCategoriaSelecionada] = useState('Todos');
   const [produtos, setProdutos] = useState([]);
@@ -198,7 +208,7 @@ function App() {
         tipoModelo: selecaoTemp.tipoModelo,
         cor: selecaoTemp.cor,
         tamanho: selecaoTemp.tamanho,
-        preco: produtoAtual.preco,
+        preco: getPrecoCalculado(produtoAtual, selecaoTemp.tipoModelo),
         quantidade: 1,
         isProntaEntrega: produtoAtual.modeProntaEntrega
       };
@@ -300,10 +310,10 @@ function App() {
       {/* TELA 1: VITRINE / CATALOGO */}
       {view === 'catalog' && (
         <div className="view-fade-in">
-          <header className="hero-banner">
+          <header className="hero-banner" style={{backgroundImage: 'linear-gradient(rgba(0,0,0,0.5), rgba(0,0,0,0.8)), url("/images/banner-placeholder.jpg")', backgroundSize: 'cover', backgroundPosition: 'center'}}>
             <div className="hero-content">
-              <h1>Coleção<br />Congresso '26</h1>
-              <p>Imperfeitos, mas chamados.</p>
+              <h1>Coleção<br />G34 2026</h1>
+              <p>Confira os modelos exclusivos.</p>
             </div>
           </header>
 
@@ -336,7 +346,10 @@ function App() {
                         return (
                           <div key={'pe-'+produto.id} className="product-card" style={{minWidth: '200px'}} onClick={() => abrirProduto(produto, true)}>
                              <div className="product-image">
-                               <span className="img-placeholder">FOTO</span>
+                               {produto.imagemCapa 
+                                 ? <img src={`/images/${produto.imagemCapa}`} alt={produto.nome} style={{width: '100%', height: '100%', objectFit: 'cover'}} /> 
+                                 : <span className="img-placeholder">FOTO</span>
+                               }
                                <span className="badge-stock">{totalEstoque} unid.</span>
                              </div>
                              <div className="product-info">
@@ -360,8 +373,10 @@ function App() {
               {produtosFiltrados.map(produto => (
                 <div key={produto.id} className="product-card" onClick={() => abrirProduto(produto, false)}>
                   <div className="product-image">
-                    {/* Placeholder para a foto */}
-                    <span className="img-placeholder">FOTO AQUI</span>
+                    {produto.imagemCapa 
+                       ? <img src={`/images/${produto.imagemCapa}`} alt={produto.nome} style={{width: '100%', height: '100%', objectFit: 'cover'}} /> 
+                       : <span className="img-placeholder">FOTO AQUI</span>
+                    }
                   </div>
                   <div className="product-info">
                     <h3>{produto.nome}</h3>
@@ -392,7 +407,10 @@ function App() {
 
           <div className="product-showcase">
             <div className="product-large-image">
-              <span className="img-placeholder">FOTO AQUI</span>
+              {produtoAtual.imagemCapa 
+                 ? <img src={`/images/${produtoAtual.imagemCapa}`} alt={produtoAtual.nome} style={{width: '100%', height: '100%', objectFit: 'cover', borderRadius: '12px'}} /> 
+                 : <span className="img-placeholder">FOTO AQUI</span>
+              }
               {produtoAtual.modeProntaEntrega && (
                 <span className="badge-stock" style={{fontSize: '1rem', padding: '0.5rem 1rem'}}>🔥 Pronta Entrega</span>
               )}
@@ -401,7 +419,7 @@ function App() {
             <div className="product-details">
               <div className="title-row">
                 <h1>{produtoAtual.nome}</h1>
-                <span className="price-tag">R$ {produtoAtual.preco.toFixed(2).replace('.', ',')}</span>
+                <span className="price-tag">R$ {getPrecoCalculado(produtoAtual, selecaoTemp.tipoModelo).toFixed(2).replace('.', ',')}</span>
               </div>
               <p className="description">
                  {produtoAtual.desc} 
@@ -466,6 +484,7 @@ function App() {
                        if (selecaoTemp.tipoModelo === 'Infantil') return isInfantil;
                        return !isInfantil;
                     })
+                    .sort((a, b) => OPCOES_TAMANHOS_ORDEM.indexOf(a) - OPCOES_TAMANHOS_ORDEM.indexOf(b))
                     .map(t => {
                     let isDisabled = false;
                     let qtdDisp = 99;
