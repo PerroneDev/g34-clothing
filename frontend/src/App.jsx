@@ -789,7 +789,7 @@ function App() {
       </footer>
 
       {/* FLOATING WHATSAPP BUTTON */}
-      <a href="https://wa.me/5522999999999" target="_blank" rel="noreferrer" className="floating-whatsapp">
+      <a href="https://wa.me/5522997059516" target="_blank" rel="noreferrer" className="floating-whatsapp">
         <span className="whatsapp-icon">💬</span>
       </a>
     </div>
