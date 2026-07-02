@@ -26,6 +26,12 @@ const getPrecoCalculado = (produto, tipoModelo) => {
   return produto.preco;
 };
 
+const getImageSrc = (imagemCapa) => {
+  if (!imagemCapa) return '';
+  if (imagemCapa.startsWith('data:image') || imagemCapa.startsWith('http')) return imagemCapa;
+  return `/images/${imagemCapa}`;
+};
+
 function App() {
   const [categoriaSelecionada, setCategoriaSelecionada] = useState('Todos');
   const [produtos, setProdutos] = useState([]);
@@ -347,7 +353,7 @@ function App() {
                           <div key={'pe-'+produto.id} className="product-card" style={{minWidth: '200px'}} onClick={() => abrirProduto(produto, true)}>
                              <div className="product-image">
                                {produto.imagemCapa 
-                                 ? <img src={`/images/${produto.imagemCapa}`} alt={produto.nome} style={{width: '100%', height: '100%', objectFit: 'cover'}} /> 
+                                 ? <img src={getImageSrc(produto.imagemCapa)} alt={produto.nome} style={{width: '100%', height: '100%', objectFit: 'cover'}} /> 
                                  : <span className="img-placeholder">FOTO</span>
                                }
                                <span className="badge-stock">{totalEstoque} unid.</span>
@@ -374,7 +380,7 @@ function App() {
                 <div key={produto.id} className="product-card" onClick={() => abrirProduto(produto, false)}>
                   <div className="product-image">
                     {produto.imagemCapa 
-                       ? <img src={`/images/${produto.imagemCapa}`} alt={produto.nome} style={{width: '100%', height: '100%', objectFit: 'cover'}} /> 
+                       ? <img src={getImageSrc(produto.imagemCapa)} alt={produto.nome} style={{width: '100%', height: '100%', objectFit: 'cover'}} /> 
                        : <span className="img-placeholder">FOTO AQUI</span>
                     }
                   </div>
@@ -408,7 +414,7 @@ function App() {
           <div className="product-showcase">
             <div className="product-large-image">
               {produtoAtual.imagemCapa 
-                 ? <img src={`/images/${produtoAtual.imagemCapa}`} alt={produtoAtual.nome} style={{width: '100%', height: '100%', objectFit: 'cover', borderRadius: '12px'}} /> 
+                 ? <img src={getImageSrc(produtoAtual.imagemCapa)} alt={produtoAtual.nome} style={{width: '100%', height: '100%', objectFit: 'cover', borderRadius: '12px'}} /> 
                  : <span className="img-placeholder">FOTO AQUI</span>
               }
               {produtoAtual.modeProntaEntrega && (

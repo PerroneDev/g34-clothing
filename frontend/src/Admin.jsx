@@ -159,6 +159,17 @@ function Admin() {
       }));
   };
 
+  const handleImageUpload = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setNovoProduto(prev => ({ ...prev, imagemCapa: reader.result }));
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
   const salvarProduto = async () => {
     if (!novoProduto.nome || !novoProduto.preco) return alert('Preencha nome e preço.');
     
@@ -559,10 +570,11 @@ function Admin() {
                        <option>Acessórios</option>
                     </select>
                  </div>
-                 <div className="input-field">
-                    <label>Imagem da Capa (Opcional)</label>
-                    <input type="text" value={novoProduto.imagemCapa || ''} onChange={e => setNovoProduto({...novoProduto, imagemCapa: e.target.value})} placeholder="Ex: camisa-preta.png" />
-                 </div>
+                  <div className="input-field">
+                     <label>Imagem da Capa</label>
+                     <input type="file" accept="image/*" onChange={handleImageUpload} />
+                     {novoProduto.imagemCapa && <img src={novoProduto.imagemCapa.startsWith('data:image') || novoProduto.imagemCapa.startsWith('http') ? novoProduto.imagemCapa : `/images/${novoProduto.imagemCapa}`} alt="Preview" style={{marginTop: '10px', height: '60px', borderRadius: '4px', objectFit: 'cover'}} />}
+                  </div>
                  <div className="input-field" style={{ gridColumn: '1 / -1' }}>
                     <label>Descrição Opcional</label>
                     <input type="text" value={novoProduto.desc} onChange={e => setNovoProduto({...novoProduto, desc: e.target.value})} placeholder="Ex: 100% algodão" />
