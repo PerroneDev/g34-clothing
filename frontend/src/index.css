@@ -61,7 +61,7 @@ body {
 /* Navbar */
 .navbar {
   display: flex;
-  justify-content: center;
+  justify-content: space-between;
   align-items: center;
   padding: 1.25rem;
   background: rgba(2, 6, 23, 0.8);
