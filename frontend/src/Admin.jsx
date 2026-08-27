@@ -607,7 +607,6 @@ function Admin() {
                     <select value={novoProduto.categoria} onChange={e => setNovoProduto({...novoProduto, categoria: e.target.value})} style={{width: '100%', padding: '1rem', background: 'var(--bg-surface)', border: '1px solid var(--border)', color: 'white', borderRadius: '8px'}}>
                        <option>Camisas</option>
                        <option>Moletons</option>
-                       <option>Acessórios</option>
                     </select>
                  </div>
                   <div className="input-field">

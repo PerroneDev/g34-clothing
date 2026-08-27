@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import './index.css';
 import { API_BASE } from './api.js';
 
-const CATEGORIAS = ['Todos', 'Camisas', 'Moletons', 'Acessórios'];
+const CATEGORIAS = ['Todos', 'Camisas', 'Moletons'];
 
 const CORES_HEX = {
   'Preto': '#111111',
@@ -382,7 +382,6 @@ function App() {
                              </div>
                              <div className="product-info">
                                <h3>{produto.nome}</h3>
-                               <p className="price">A partir de R$ {getStartingPrice(produto).toFixed(2).replace('.', ',')}</p>
                              </div>
                           </div>
                         )
@@ -408,7 +407,6 @@ function App() {
                   </div>
                   <div className="product-info">
                     <h3>{produto.nome}</h3>
-                    <p className="price">A partir de R$ {getStartingPrice(produto).toFixed(2).replace('.', ',')}</p>
                   </div>
                 </div>
               ))}
