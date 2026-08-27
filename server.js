@@ -78,9 +78,10 @@ mongoose.connect(process.env.MONGO_URI)
 app.get('/api/produtos', async (req, res) => {
     try {
         const produtos = await Produto.find();
-        // Mapeia _id para id para manter compatibilidade com o frontend
+        // flattenMaps: true converte o campo precosModelos (Map do Mongoose)
+        // para um objeto JS simples, necessário para o frontend acessar via produto.precosModelos[chave]
         const produtosFormatados = produtos.map(p => {
-            const obj = p.toObject();
+            const obj = p.toObject({ flattenMaps: true });
             obj.id = obj._id.toString();
             return obj;
         });

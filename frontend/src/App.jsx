@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import './index.css';
 import { API_BASE } from './api.js';
 
-const CATEGORIAS = ['Todos', 'Camisas', 'Moletons'];
+
 
 const CORES_HEX = {
   'Preto': '#111111',
@@ -52,9 +52,7 @@ const getImageSrc = (imagemCapa) => {
 };
 
 function App() {
-  const [categoriaSelecionada, setCategoriaSelecionada] = useState('Todos');
   const [produtos, setProdutos] = useState([]);
-  const [loadingProdutos, setLoadingProdutos] = useState(true);
 
   useEffect(() => {
     const fetchProdutos = async () => {
@@ -67,14 +65,9 @@ function App() {
       } catch (err) {
         console.error("Erro ao carregar produtos:", err);
       }
-      setLoadingProdutos(false);
     };
     fetchProdutos();
   }, []);
-
-  const produtosFiltrados = produtos.filter(p =>
-    categoriaSelecionada === 'Todos' || p.categoria === categoriaSelecionada
-  );
 
   const produtosProntaEntrega = produtos.filter(p => p.estoqueLocal && p.estoqueLocal.length > 0);
 
@@ -346,22 +339,9 @@ function App() {
           </header>
 
           <main className="catalog-section">
-            <div className="categories-wrapper">
-              <div className="categories-scroll">
-                {CATEGORIAS.map(cat => (
-                  <button
-                    key={cat}
-                    className={`cat-pill ${categoriaSelecionada === cat ? 'active' : ''}`}
-                    onClick={() => setCategoriaSelecionada(cat)}
-                  >
-                    {cat}
-                  </button>
-                ))}
-              </div>
-            </div>
 
             {/* SEÇÃO PRONTA ENTREGA */}
-            {produtosProntaEntrega.length > 0 && categoriaSelecionada === 'Todos' && (
+            {produtosProntaEntrega.length > 0 && (
                <div style={{marginBottom: '3rem'}}>
                  <div className="section-header">
                    <h2>🔥 Pronta Entrega</h2>
@@ -392,12 +372,12 @@ function App() {
             )}
 
             <div className="section-header">
-              <h2>{categoriaSelecionada === 'Todos' ? 'Sob Encomenda' : categoriaSelecionada}</h2>
-              <span>{produtosFiltrados.length} produtos</span>
+              <h2>Sob Encomenda</h2>
+              <span>{produtos.length} produtos</span>
             </div>
 
             <div className="product-grid">
-              {produtosFiltrados.map(produto => (
+              {produtos.map(produto => (
                 <div key={produto.id} className="product-card" onClick={() => abrirProduto(produto, false)}>
                   <div className="product-image">
                     {produto.imagemCapa
