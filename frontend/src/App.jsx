@@ -53,6 +53,8 @@ const getImageSrc = (imagemCapa) => {
 
 function App() {
   const [produtos, setProdutos] = useState([]);
+  const [loadingProdutos, setLoadingProdutos] = useState(true);
+  const [erroProdutos, setErroProdutos] = useState(false);
 
   useEffect(() => {
     const fetchProdutos = async () => {
@@ -61,10 +63,14 @@ function App() {
         if (response.ok) {
           const data = await response.json();
           setProdutos(data);
+        } else {
+          setErroProdutos(true);
         }
       } catch (err) {
         console.error("Erro ao carregar produtos:", err);
+        setErroProdutos(true);
       }
+      setLoadingProdutos(false);
     };
     fetchProdutos();
   }, []);
@@ -340,57 +346,99 @@ function App() {
 
           <main className="catalog-section">
 
-            {/* SEÇÃO PRONTA ENTREGA */}
-            {produtosProntaEntrega.length > 0 && (
-               <div style={{marginBottom: '3rem'}}>
-                 <div className="section-header">
-                   <h2>🔥 Pronta Entrega</h2>
-                   <span>Envio imediato</span>
-                 </div>
-                 <div className="categories-wrapper" style={{margin: 0}}>
-                   <div className="categories-scroll" style={{paddingBottom: '1rem'}}>
-                     {produtosProntaEntrega.map(produto => {
-                        const totalEstoque = produto.estoqueLocal.reduce((acc, curr) => acc + curr.qtd, 0);
-                        return (
-                          <div key={'pe-'+produto.id} className="product-card" style={{minWidth: '200px'}} onClick={() => abrirProduto(produto, true)}>
-                             <div className="product-image">
-                               {produto.imagemCapa
-                                 ? <img src={getImageSrc(produto.imagemCapa)} alt={produto.nome} style={{width: '100%', height: '100%', objectFit: 'cover'}} />
-                                 : <span className="img-placeholder">FOTO</span>
-                               }
-                               <span className="badge-stock">{totalEstoque} unid.</span>
-                             </div>
-                             <div className="product-info">
-                               <h3>{produto.nome}</h3>
-                             </div>
-                          </div>
-                        )
-                     })}
-                   </div>
-                 </div>
-               </div>
+            {/* LOADING SKELETON */}
+            {loadingProdutos && (
+              <div>
+                <div className="skeleton-header">
+                  <div className="skeleton-line" style={{width: '160px', height: '24px'}}></div>
+                  <div className="skeleton-line" style={{width: '60px', height: '18px'}}></div>
+                </div>
+                <div className="skeleton-grid">
+                  {[1,2,3,4,5,6].map(i => (
+                    <div key={i} className="skeleton-card">
+                      <div className="skeleton-image"></div>
+                      <div className="skeleton-info">
+                        <div className="skeleton-line" style={{width: '80%'}}></div>
+                        <div className="skeleton-line" style={{width: '50%', height: '12px'}}></div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                <p className="skeleton-msg">
+                  ⏳ Carregando produtos... O servidor pode demorar alguns segundos para acordar.
+                </p>
+              </div>
             )}
 
-            <div className="section-header">
-              <h2>Sob Encomenda</h2>
-              <span>{produtos.length} produtos</span>
-            </div>
+            {/* ERRO DE CONEXÃO */}
+            {erroProdutos && !loadingProdutos && (
+              <div style={{textAlign: 'center', padding: '4rem 1rem'}}>
+                <p style={{fontSize: '2rem', marginBottom: '1rem'}}>😕</p>
+                <h3 style={{marginBottom: '0.5rem'}}>Não conseguimos carregar os produtos</h3>
+                <p style={{color: 'var(--text-muted)', marginBottom: '1.5rem'}}>Verifique sua conexão e tente novamente.</p>
+                <button className="btn-primary" onClick={() => window.location.reload()}>
+                  Tentar novamente
+                </button>
+              </div>
+            )}
 
-            <div className="product-grid">
-              {produtos.map(produto => (
-                <div key={produto.id} className="product-card" onClick={() => abrirProduto(produto, false)}>
-                  <div className="product-image">
-                    {produto.imagemCapa
-                       ? <img src={getImageSrc(produto.imagemCapa)} alt={produto.nome} style={{width: '100%', height: '100%', objectFit: 'cover'}} />
-                       : <span className="img-placeholder">FOTO AQUI</span>
-                    }
+            {/* CONTEÚDO NORMAL */}
+            {!loadingProdutos && !erroProdutos && (
+              <>
+                {/* SEÇÃO PRONTA ENTREGA */}
+                {produtosProntaEntrega.length > 0 && (
+                  <div style={{marginBottom: '3rem'}}>
+                    <div className="section-header">
+                      <h2>🔥 Pronta Entrega</h2>
+                      <span>Envio imediato</span>
+                    </div>
+                    <div className="categories-wrapper" style={{margin: 0}}>
+                      <div className="categories-scroll" style={{paddingBottom: '1rem'}}>
+                        {produtosProntaEntrega.map(produto => {
+                          const totalEstoque = produto.estoqueLocal.reduce((acc, curr) => acc + curr.qtd, 0);
+                          return (
+                            <div key={'pe-'+produto.id} className="product-card" style={{minWidth: '200px'}} onClick={() => abrirProduto(produto, true)}>
+                              <div className="product-image">
+                                {produto.imagemCapa
+                                  ? <img src={getImageSrc(produto.imagemCapa)} alt={produto.nome} style={{width: '100%', height: '100%', objectFit: 'cover'}} />
+                                  : <span className="img-placeholder">FOTO</span>
+                                }
+                                <span className="badge-stock">{totalEstoque} unid.</span>
+                              </div>
+                              <div className="product-info">
+                                <h3>{produto.nome}</h3>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
                   </div>
-                  <div className="product-info">
-                    <h3>{produto.nome}</h3>
-                  </div>
+                )}
+
+                <div className="section-header">
+                  <h2>Sob Encomenda</h2>
+                  <span>{produtos.length} produtos</span>
                 </div>
-              ))}
-            </div>
+
+                <div className="product-grid">
+                  {produtos.map(produto => (
+                    <div key={produto.id} className="product-card" onClick={() => abrirProduto(produto, false)}>
+                      <div className="product-image">
+                        {produto.imagemCapa
+                          ? <img src={getImageSrc(produto.imagemCapa)} alt={produto.nome} style={{width: '100%', height: '100%', objectFit: 'cover'}} />
+                          : <span className="img-placeholder">FOTO AQUI</span>
+                        }
+                      </div>
+                      <div className="product-info">
+                        <h3>{produto.nome}</h3>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </>
+            )}
+
           </main>
 
           {/* FLOATING CART BUTTON */}
