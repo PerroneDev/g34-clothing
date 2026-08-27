@@ -4,25 +4,72 @@ const cors = require('cors');
 const mongoose = require('mongoose');
 const jwt = require('jsonwebtoken');
 const { OAuth2Client } = require('google-auth-library');
+const rateLimit = require('express-rate-limit');
 
 const Pedido = require('./models/Pedido');
 const Produto = require('./models/Produto');
 const { inicializarWhatsApp, getWhatsAppStatus, enviarMensagemPedido, atualizarEtiquetaPedido, enviarMensagemAprovacao, enviarMensagemPronto } = require('./whatsapp');
 
 const app = express();
-app.use(cors());
+
+// ============================================
+// CORS — origens permitidas
+// ============================================
+const allowedOrigins = [
+    process.env.FRONTEND_URL || 'https://g34-clothing.vercel.app',
+    'http://localhost:5173',
+    'http://localhost:4173'
+];
+
+app.use(cors({
+    origin: (origin, callback) => {
+        // Permite requisições sem origin (ex: curl, Postman) ou origens na whitelist
+        if (!origin || allowedOrigins.includes(origin)) {
+            callback(null, true);
+        } else {
+            callback(new Error('Origem não permitida pelo CORS'));
+        }
+    },
+    methods: ['GET', 'POST', 'PUT', 'DELETE']
+}));
+
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ limit: '10mb', extended: true }));
+
+// ============================================
+// RATE LIMITING
+// ============================================
+const limiterGeral = rateLimit({
+    windowMs: 60 * 1000,
+    max: 60,
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: { erro: 'Muitas requisições. Tente novamente em alguns segundos.' }
+});
+
+const limiterPedidos = rateLimit({
+    windowMs: 60 * 1000,
+    max: 10,
+    message: { erro: 'Limite de pedidos atingido. Tente novamente em 1 minuto.' }
+});
+
+const limiterLogin = rateLimit({
+    windowMs: 60 * 1000,
+    max: 5,
+    message: { erro: 'Muitas tentativas de login. Aguarde 1 minuto.' }
+});
+
+app.use('/api/', limiterGeral);
 
 const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
 // Conexão com o Banco
 mongoose.connect(process.env.MONGO_URI)
-  .then(() => {
-      console.log('🍃 Conectado ao MongoDB - Sistema do Congresso');
-      inicializarWhatsApp(mongoose);
-  })
-  .catch(err => console.error('Erro no banco:', err));
+    .then(() => {
+        console.log('🍃 Conectado ao MongoDB - Sistema do Congresso');
+        inicializarWhatsApp();
+    })
+    .catch(err => console.error('Erro no banco:', err));
 
 // ============================================
 // ROTAS DA LOJA (PÚBLICAS)
@@ -31,7 +78,7 @@ mongoose.connect(process.env.MONGO_URI)
 app.get('/api/produtos', async (req, res) => {
     try {
         const produtos = await Produto.find();
-        // Mapeia _id para id para manter compatibilidade com o frontend antigo
+        // Mapeia _id para id para manter compatibilidade com o frontend
         const produtosFormatados = produtos.map(p => {
             const obj = p.toObject();
             obj.id = obj._id.toString();
@@ -57,17 +104,47 @@ app.get('/api/pedidos/rastreio/:pedidoId', async (req, res) => {
     }
 });
 
-app.post('/api/pedidos', async (req, res) => {
+app.post('/api/pedidos', limiterPedidos, async (req, res) => {
     try {
-        const novoPedido = new Pedido(req.body);
+        const { nome, telefone, formaPagamento, itens, valorTotal } = req.body;
+
+        // Validação dos campos obrigatórios
+        if (!nome || typeof nome !== 'string' || nome.trim().length < 2) {
+            return res.status(400).json({ erro: 'Nome inválido.' });
+        }
+        if (!telefone || typeof telefone !== 'string') {
+            return res.status(400).json({ erro: 'Telefone inválido.' });
+        }
+        if (!['PIX', 'DINHEIRO', 'CREDITO'].includes(formaPagamento)) {
+            return res.status(400).json({ erro: 'Forma de pagamento inválida.' });
+        }
+        if (!Array.isArray(itens) || itens.length === 0) {
+            return res.status(400).json({ erro: 'O pedido deve conter ao menos um item.' });
+        }
+        if (typeof valorTotal !== 'number' || valorTotal <= 0) {
+            return res.status(400).json({ erro: 'Valor total inválido.' });
+        }
+
+        // pedidoId gerado no backend com mais entropia (6 chars)
+        const pedidoId = `G34-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
+
+        const novoPedido = new Pedido({
+            pedidoId,
+            nome: nome.trim(),
+            telefone: telefone.trim(),
+            formaPagamento,
+            itens,
+            valorTotal
+        });
+
         const pedidoSalvo = await novoPedido.save();
-        
+
         // Envia a mensagem do WhatsApp para o cliente em segundo plano
         enviarMensagemPedido(pedidoSalvo);
-        
+
         res.status(201).json(pedidoSalvo);
     } catch (erro) {
-        console.error("Erro ao salvar pedido:", erro);
+        console.error('Erro ao salvar pedido:', erro);
         res.status(500).json({ erro: 'Erro ao processar pedido' });
     }
 });
@@ -93,7 +170,7 @@ function verifyToken(req, res, next) {
 // ============================================
 
 // Login via Google OAuth
-app.post('/api/admin/login', async (req, res) => {
+app.post('/api/admin/login', limiterLogin, async (req, res) => {
     const { credential } = req.body;
     try {
         const ticket = await googleClient.verifyIdToken({
@@ -112,7 +189,7 @@ app.post('/api/admin/login', async (req, res) => {
         const token = jwt.sign({ email }, process.env.JWT_SECRET, { expiresIn: '8h' });
         res.json({ token, user: { name: payload.name, picture: payload.picture } });
     } catch (error) {
-        console.error("Erro no login do Google:", error);
+        console.error('Erro no login do Google:', error);
         res.status(500).json({ erro: 'Falha na autenticação do Google' });
     }
 });
@@ -142,18 +219,18 @@ app.put('/api/pedidos/:id/aprovar', verifyToken, async (req, res) => {
         const todosProntaEntrega = pedido.itens.every(i => i.isProntaEntrega);
 
         // Se for tudo pronta entrega, já vai direto para aguardando retirada
-        pedido.status = todosProntaEntrega ? 'Aguardando Entrega' : 'Em Produção'; 
+        pedido.status = todosProntaEntrega ? 'Aguardando Entrega' : 'Em Produção';
         await pedido.save();
 
         // 1. Atualiza a Etiqueta no WhatsApp
         await atualizarEtiquetaPedido(pedido.telefone, pedido.status);
-        
+
         // 2. Envia mensagem de agradecimento/confirmação pro cliente
         await enviarMensagemAprovacao(pedido.telefone);
 
         res.json(pedido);
     } catch (error) {
-        console.error("Erro ao aprovar:", error);
+        console.error('Erro ao aprovar:', error);
         res.status(500).json({ erro: 'Erro ao aprovar pedido' });
     }
 });
@@ -165,7 +242,7 @@ app.put('/api/pedidos/:pedidoId/item/:itemId/pronto', verifyToken, async (req, r
         if (!pedido) return res.status(404).json({ erro: 'Pedido não encontrado' });
 
         let item = pedido.itens.id(req.params.itemId);
-        
+
         // Fallback: se não achar por ID, tenta buscar pelo índice (útil para pedidos antigos sem _id)
         if (!item && !isNaN(req.params.itemId)) {
             item = pedido.itens[parseInt(req.params.itemId)];
@@ -174,22 +251,20 @@ app.put('/api/pedidos/:pedidoId/item/:itemId/pronto', verifyToken, async (req, r
         if (!item) return res.status(404).json({ erro: 'Item não encontrado' });
 
         item.pronto = !item.pronto; // Alterna o status
-        
+
         // Verifica se todos os itens estão prontos (itens de pronta entrega não precisam ser estampados)
         const todosProntos = pedido.itens.every(i => i.pronto || i.isProntaEntrega);
         if (todosProntos && pedido.status === 'Em Produção') {
             pedido.status = 'Aguardando Entrega';
-            // Atualiza a Etiqueta no WhatsApp
             await atualizarEtiquetaPedido(pedido.telefone, 'Aguardando Entrega');
-        } else if (!todosProntos && (pedido.status === 'Finalizado' || pedido.status === 'Aguardando Entrega')) {
+        } else if (!todosProntos && pedido.status === 'Aguardando Entrega') {
             pedido.status = 'Em Produção';
-            // Volta a Etiqueta no WhatsApp (opcional)
         }
 
         await pedido.save();
         res.json(pedido);
     } catch (error) {
-        console.error("Erro ao atualizar item:", error);
+        console.error('Erro ao atualizar item:', error);
         res.status(500).json({ erro: 'Erro ao atualizar item' });
     }
 });
@@ -201,7 +276,7 @@ app.delete('/api/pedidos/:id', verifyToken, async (req, res) => {
         if (!pedido) return res.status(404).json({ erro: 'Pedido não encontrado' });
         res.json({ mensagem: 'Pedido excluído com sucesso' });
     } catch (error) {
-        console.error("Erro ao deletar:", error);
+        console.error('Erro ao deletar:', error);
         res.status(500).json({ erro: 'Erro ao deletar pedido' });
     }
 });
@@ -211,11 +286,11 @@ app.post('/api/pedidos/:id/notificar-pronto', verifyToken, async (req, res) => {
     try {
         const pedido = await Pedido.findById(req.params.id);
         if (!pedido) return res.status(404).json({ erro: 'Pedido não encontrado' });
-        
+
         await enviarMensagemPronto(pedido.telefone);
         res.json({ mensagem: 'Notificação enviada com sucesso' });
     } catch (error) {
-        console.error("Erro ao notificar pronto:", error);
+        console.error('Erro ao notificar pronto:', error);
         res.status(500).json({ erro: 'Erro ao enviar notificação' });
     }
 });
@@ -228,12 +303,12 @@ app.put('/api/pedidos/:id/entregar', verifyToken, async (req, res) => {
 
         pedido.status = 'Entregue';
         await pedido.save();
-        
+
         await atualizarEtiquetaPedido(pedido.telefone, 'Entregue');
 
         res.json(pedido);
     } catch (error) {
-        console.error("Erro ao marcar como entregue:", error);
+        console.error('Erro ao marcar como entregue:', error);
         res.status(500).json({ erro: 'Erro ao marcar como entregue' });
     }
 });
@@ -241,29 +316,48 @@ app.put('/api/pedidos/:id/entregar', verifyToken, async (req, res) => {
 // ============================================
 // GESTÃO DE PRODUTOS (ADMIN)
 // ============================================
+
+// Campos permitidos para evitar sobrescrita de campos internos via req.body
+const CAMPOS_PRODUTO_PERMITIDOS = ['nome', 'desc', 'categoria', 'preco', 'cores', 'modelos', 'precosModelos', 'imagemCapa', 'tamanhos', 'estoqueLocal'];
+
 app.post('/api/admin/produtos', verifyToken, async (req, res) => {
     try {
-        const novoProduto = new Produto(req.body);
+        const dados = {};
+        CAMPOS_PRODUTO_PERMITIDOS.forEach(campo => {
+            if (req.body[campo] !== undefined) dados[campo] = req.body[campo];
+        });
+        const novoProduto = new Produto(dados);
         const salvo = await novoProduto.save();
         res.status(201).json(salvo);
     } catch (error) {
-        console.error("Erro ao salvar produto:", error);
+        console.error('Erro ao salvar produto:', error);
         res.status(500).json({ erro: 'Erro ao criar produto' });
     }
 });
 
 app.put('/api/admin/produtos/:id', verifyToken, async (req, res) => {
     try {
-        const atualizado = await Produto.findByIdAndUpdate(req.params.id, req.body, { new: true });
+        const dados = {};
+        CAMPOS_PRODUTO_PERMITIDOS.forEach(campo => {
+            if (req.body[campo] !== undefined) dados[campo] = req.body[campo];
+        });
+        const atualizado = await Produto.findByIdAndUpdate(
+            req.params.id,
+            { $set: dados },
+            { new: true, runValidators: true }
+        );
+        if (!atualizado) return res.status(404).json({ erro: 'Produto não encontrado' });
         res.json(atualizado);
     } catch (error) {
+        console.error('Erro ao atualizar produto:', error);
         res.status(500).json({ erro: 'Erro ao atualizar produto' });
     }
 });
 
 app.delete('/api/admin/produtos/:id', verifyToken, async (req, res) => {
     try {
-        await Produto.findByIdAndDelete(req.params.id);
+        const produto = await Produto.findByIdAndDelete(req.params.id);
+        if (!produto) return res.status(404).json({ erro: 'Produto não encontrado' });
         res.json({ mensagem: 'Produto excluído com sucesso' });
     } catch (error) {
         res.status(500).json({ erro: 'Erro ao excluir produto' });

@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import './index.css';
+import { API_BASE } from './api.js';
 
 const CATEGORIAS = ['Todos', 'Camisas', 'Moletons', 'Acessórios'];
 
@@ -18,12 +19,30 @@ const PAGAMENTOS = [
 
 const OPCOES_TAMANHOS_ORDEM = ['P', 'M', 'G', 'GG', 'XG', '2 anos', '4 anos', '6 anos', '8 anos', '10 anos', '12 anos', '14 anos', '16 anos', 'Único'];
 
+// Retorna o preço do modelo selecionado; se não houver, usa o menor preço disponível
 const getPrecoCalculado = (produto, tipoModelo) => {
-  if (!tipoModelo) return produto.preco;
-  if (produto.precosModelos && produto.precosModelos[tipoModelo]) {
+  if (tipoModelo && produto.precosModelos && produto.precosModelos[tipoModelo]) {
     return parseFloat(produto.precosModelos[tipoModelo]);
   }
-  return produto.preco;
+  // Fallback: menor preço entre todos os modelos
+  if (produto.precosModelos) {
+    const precos = Object.values(produto.precosModelos)
+      .map(v => parseFloat(v))
+      .filter(v => !isNaN(v) && v > 0);
+    if (precos.length > 0) return Math.min(...precos);
+  }
+  return produto.preco || 0;
+};
+
+// Retorna o menor preço disponível do produto (para exibição nos cards do catálogo)
+const getStartingPrice = (produto) => {
+  if (produto.precosModelos) {
+    const precos = Object.values(produto.precosModelos)
+      .map(v => parseFloat(v))
+      .filter(v => !isNaN(v) && v > 0);
+    if (precos.length > 0) return Math.min(...precos);
+  }
+  return produto.preco || 0;
 };
 
 const getImageSrc = (imagemCapa) => {
@@ -40,7 +59,7 @@ function App() {
   useEffect(() => {
     const fetchProdutos = async () => {
       try {
-        const response = await fetch('https://g34-api.onrender.com/api/produtos');
+        const response = await fetch(`${API_BASE}/api/produtos`);
         if (response.ok) {
           const data = await response.json();
           setProdutos(data);
@@ -53,7 +72,7 @@ function App() {
     fetchProdutos();
   }, []);
 
-  const produtosFiltrados = produtos.filter(p => 
+  const produtosFiltrados = produtos.filter(p =>
     categoriaSelecionada === 'Todos' || p.categoria === categoriaSelecionada
   );
 
@@ -118,6 +137,10 @@ function App() {
   });
   const [tamanhoSugerido, setTamanhoSugerido] = useState('');
 
+  // Rastreio de Pedido
+  const [codigoRastreio, setCodigoRastreio] = useState('');
+  const [resultadoRastreio, setResultadoRastreio] = useState(null);
+
   const calcularTamanho = () => {
     localStorage.setItem('g34_size_data', JSON.stringify(calcData));
     const h = parseInt(calcData.altura);
@@ -145,7 +168,7 @@ function App() {
 
   const abrirProduto = (produto, isProntaEntrega = false) => {
     setProdutoAtual({ ...produto, modeProntaEntrega: isProntaEntrega });
-    
+
     let defaultCor = produto.cores[0] ? (typeof produto.cores[0] === 'string' ? produto.cores[0] : produto.cores[0].nome) : '';
     let defaultTamanho = '';
 
@@ -156,7 +179,7 @@ function App() {
 
     const availableModelos = produto.modelos && produto.modelos.length > 0 ? produto.modelos : ['Padrão', 'Baby Look', 'Oversized', 'Infantil'];
     let defaultModelo = availableModelos[0];
-    
+
     // Attempt smart default if availableModelos is fallback
     if (!produto.modelos || produto.modelos.length === 0) {
       const hasAdultSizes = produto.tamanhos && produto.tamanhos.some(t => !['2 anos', '4 anos', '6 anos', '8 anos', '10 anos', '12 anos', '14 anos', '16 anos'].includes(t));
@@ -195,10 +218,10 @@ function App() {
       }
     }
 
-    const itemIndex = carrinho.findIndex(i => 
-      i.produtoId === produtoAtual.id && 
-      i.cor === selecaoTemp.cor && 
-      i.tamanho === selecaoTemp.tamanho && 
+    const itemIndex = carrinho.findIndex(i =>
+      i.produtoId === produtoAtual.id &&
+      i.cor === selecaoTemp.cor &&
+      i.tamanho === selecaoTemp.tamanho &&
       i.tipoModelo === selecaoTemp.tipoModelo &&
       i.isProntaEntrega === produtoAtual.modeProntaEntrega
     );
@@ -244,10 +267,8 @@ function App() {
 
     setLoading(true);
 
-    const pedidoId = `G34-${Math.random().toString(36).substring(2, 6).toUpperCase()}`;
-
+    // pedidoId agora é gerado pelo backend com mais segurança
     const payload = {
-      pedidoId,
       nome: formData.nome,
       telefone: formData.telefone,
       formaPagamento: formData.formaPagamento,
@@ -256,19 +277,20 @@ function App() {
     };
 
     try {
-      const response = await fetch('https://g34-api.onrender.com/api/pedidos', {
+      const response = await fetch(`${API_BASE}/api/pedidos`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
       });
       if (response.ok) {
-        setSuccess(pedidoId);
+        const data = await response.json();
+        setSuccess(data.pedidoId);
       } else {
-        alert('Erro ao enviar pedido. Tente novamente.');
+        const data = await response.json();
+        alert(data.erro || 'Erro ao enviar pedido. Tente novamente.');
       }
     } catch (error) {
-      // Como não temos backend, vamos simular sucesso para poder testar
-      setTimeout(() => setSuccess(pedidoId), 800);
+      alert('Erro de conexão. Verifique sua internet e tente novamente.');
     }
     setLoading(false);
   };
@@ -327,8 +349,8 @@ function App() {
             <div className="categories-wrapper">
               <div className="categories-scroll">
                 {CATEGORIAS.map(cat => (
-                  <button 
-                    key={cat} 
+                  <button
+                    key={cat}
                     className={`cat-pill ${categoriaSelecionada === cat ? 'active' : ''}`}
                     onClick={() => setCategoriaSelecionada(cat)}
                   >
@@ -352,15 +374,15 @@ function App() {
                         return (
                           <div key={'pe-'+produto.id} className="product-card" style={{minWidth: '200px'}} onClick={() => abrirProduto(produto, true)}>
                              <div className="product-image">
-                               {produto.imagemCapa 
-                                 ? <img src={getImageSrc(produto.imagemCapa)} alt={produto.nome} style={{width: '100%', height: '100%', objectFit: 'cover'}} /> 
+                               {produto.imagemCapa
+                                 ? <img src={getImageSrc(produto.imagemCapa)} alt={produto.nome} style={{width: '100%', height: '100%', objectFit: 'cover'}} />
                                  : <span className="img-placeholder">FOTO</span>
                                }
                                <span className="badge-stock">{totalEstoque} unid.</span>
                              </div>
                              <div className="product-info">
                                <h3>{produto.nome}</h3>
-                               <p className="price">R$ {produto.preco.toFixed(2).replace('.', ',')}</p>
+                               <p className="price">A partir de R$ {getStartingPrice(produto).toFixed(2).replace('.', ',')}</p>
                              </div>
                           </div>
                         )
@@ -379,14 +401,14 @@ function App() {
               {produtosFiltrados.map(produto => (
                 <div key={produto.id} className="product-card" onClick={() => abrirProduto(produto, false)}>
                   <div className="product-image">
-                    {produto.imagemCapa 
-                       ? <img src={getImageSrc(produto.imagemCapa)} alt={produto.nome} style={{width: '100%', height: '100%', objectFit: 'cover'}} /> 
+                    {produto.imagemCapa
+                       ? <img src={getImageSrc(produto.imagemCapa)} alt={produto.nome} style={{width: '100%', height: '100%', objectFit: 'cover'}} />
                        : <span className="img-placeholder">FOTO AQUI</span>
                     }
                   </div>
                   <div className="product-info">
                     <h3>{produto.nome}</h3>
-                    <p className="price">R$ {produto.preco.toFixed(2).replace('.', ',')}</p>
+                    <p className="price">A partir de R$ {getStartingPrice(produto).toFixed(2).replace('.', ',')}</p>
                   </div>
                 </div>
               ))}
@@ -413,8 +435,8 @@ function App() {
 
           <div className="product-showcase">
             <div className="product-large-image">
-              {produtoAtual.imagemCapa 
-                 ? <img src={getImageSrc(produtoAtual.imagemCapa)} alt={produtoAtual.nome} style={{width: '100%', height: '100%', objectFit: 'cover', borderRadius: '12px'}} /> 
+              {produtoAtual.imagemCapa
+                 ? <img src={getImageSrc(produtoAtual.imagemCapa)} alt={produtoAtual.nome} style={{width: '100%', height: '100%', objectFit: 'cover', borderRadius: '12px'}} />
                  : <span className="img-placeholder">FOTO AQUI</span>
               }
               {produtoAtual.modeProntaEntrega && (
@@ -425,10 +447,9 @@ function App() {
             <div className="product-details">
               <div className="title-row">
                 <h1>{produtoAtual.nome}</h1>
-                <span className="price-tag">R$ {getPrecoCalculado(produtoAtual, selecaoTemp.tipoModelo).toFixed(2).replace('.', ',')}</span>
               </div>
               <p className="description">
-                 {produtoAtual.desc} 
+                 {produtoAtual.desc}
                  {produtoAtual.modeProntaEntrega && " (Você está vendo as opções disponíveis para envio imediato. Quantidades limitadas)."}
               </p>
 
@@ -439,18 +460,18 @@ function App() {
                     const c = typeof corObj === 'string' ? corObj : corObj.nome;
                     const hexCor = typeof corObj === 'string' ? (CORES_HEX[c] || '#ccc') : corObj.hex;
                     let isDisabled = false;
-                    
+
                     if (produtoAtual.modeProntaEntrega) {
                        const inStock = produtoAtual.estoqueLocal.filter(e => e.cor === c);
                        const estoqueCor = inStock.reduce((acc, curr) => acc + curr.qtd, 0);
                        const inCart = inStock.reduce((acc, curr) => acc + getQuantidadeNoCarrinho(produtoAtual.id, curr.cor, curr.tamanho, true), 0);
                        if (estoqueCor - inCart <= 0) isDisabled = true;
                     }
-                    
+
                     if (isDisabled) return null;
 
                     return (
-                      <div 
+                      <div
                         key={c}
                         className={`color-circle-wrapper ${selecaoTemp.cor === c ? 'active' : ''}`}
                         onClick={() => setSelecaoTemp({ ...selecaoTemp, cor: c, tamanho: '' })}
@@ -464,17 +485,28 @@ function App() {
               </div>
 
               <div className="selector-group">
-                <h3>2. Modelo da Camisa</h3>
+                <h3>2. Tipo de Produto</h3>
                 <div className="pills-row size-pills">
-                  {(produtoAtual.modelos && produtoAtual.modelos.length > 0 ? produtoAtual.modelos : ['Padrão', 'Baby Look', 'Oversized', 'Infantil']).map(m => (
-                    <button
-                      key={m}
-                      className={`pill size-pill ${selecaoTemp.tipoModelo === m ? 'active' : ''}`}
-                      onClick={() => setSelecaoTemp({ ...selecaoTemp, tipoModelo: m, tamanho: '' })}
-                    >
-                      {m}
-                    </button>
-                  ))}
+                  {(produtoAtual.modelos && produtoAtual.modelos.length > 0 ? produtoAtual.modelos : ['Padrão', 'Baby Look', 'Oversized', 'Infantil']).map(m => {
+                    const precoModelo = produtoAtual.precosModelos && produtoAtual.precosModelos[m]
+                      ? parseFloat(produtoAtual.precosModelos[m])
+                      : null;
+                    return (
+                      <button
+                        key={m}
+                        className={`pill size-pill ${selecaoTemp.tipoModelo === m ? 'active' : ''}`}
+                        onClick={() => setSelecaoTemp({ ...selecaoTemp, tipoModelo: m, tamanho: '' })}
+                        style={{display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px'}}
+                      >
+                        <span>{m}</span>
+                        {precoModelo !== null && (
+                          <span style={{fontSize: '0.75rem', fontWeight: 600, opacity: 0.9}}>
+                            R$ {precoModelo.toFixed(2).replace('.', ',')}
+                          </span>
+                        )}
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
 
@@ -639,41 +671,40 @@ function App() {
         </div>
       )}
 
-
-
-      {/* TELA 6: RASTREIO DE PEDIDO */}
+      {/* TELA 5: RASTREIO DE PEDIDO */}
       {view === 'rastreio' && (
         <div className="view-fade-in bg-alt" style={{ padding: '2rem', minHeight: '100vh' }}>
           <button className="btn-back" onClick={() => setView('catalog')}>
             ← Voltar
           </button>
-          
+
           <div className="checkout-container" style={{paddingTop: '3rem', maxWidth: '400px', margin: '0 auto'}}>
              <h1 className="checkout-title" style={{textAlign: 'center'}}>Rastreio</h1>
              <p className="text-muted" style={{textAlign: 'center', marginBottom: '2rem'}}>Acompanhe o status do seu pedido em tempo real.</p>
 
              <div className="input-field">
                <label>Código do Pedido</label>
-               <input 
-                  type="text" 
-                  placeholder="Ex: G34-ABCD" 
+               <input
+                  type="text"
+                  placeholder="Ex: G34-ABCD"
                   style={{textTransform: 'uppercase'}}
-                  id="rastreio-input"
+                  value={codigoRastreio}
+                  onChange={e => setCodigoRastreio(e.target.value.toUpperCase())}
                />
                <button className="btn-primary full shadow-glow" style={{marginTop: '1rem'}} onClick={async () => {
-                  const val = document.getElementById('rastreio-input').value.toUpperCase();
-                  if(!val) return alert('Digite o código do pedido.');
-                  
+                  if (!codigoRastreio.trim()) return alert('Digite o código do pedido.');
+
                   try {
-                     const response = await fetch(`https://g34-api.onrender.com/api/pedidos/rastreio/${val}`);
+                     const response = await fetch(`${API_BASE}/api/pedidos/rastreio/${codigoRastreio.trim()}`);
                      if (!response.ok) {
-                         alert('Pedido não encontrado ou erro no servidor.');
+                         setResultadoRastreio(null);
+                         alert('Pedido não encontrado. Verifique o código e tente novamente.');
                          return;
                      }
                      const data = await response.json();
                      let status = data.status;
                      let desc = '';
-                     
+
                      if (status === 'Aguardando Pagamento') {
                         desc = 'Estamos aguardando a confirmação do seu pagamento via WhatsApp ou Presencial.';
                      } else if (status === 'Em Produção') {
@@ -686,9 +717,7 @@ function App() {
                         desc = 'Seu pedido está sendo processado.';
                      }
 
-                     document.getElementById('rastreio-result').style.display = 'block';
-                     document.getElementById('rastreio-status-title').innerText = status;
-                     document.getElementById('rastreio-status-desc').innerText = desc;
+                     setResultadoRastreio({ status, desc });
                   } catch (error) {
                      alert('Erro de conexão ao buscar pedido.');
                   }
@@ -697,10 +726,12 @@ function App() {
                </button>
              </div>
 
-             <div id="rastreio-result" style={{display: 'none', marginTop: '2rem', padding: '1.5rem', background: 'var(--bg-main)', border: '1px solid var(--border)', borderRadius: '8px', textAlign: 'center'}}>
-                 <h2 id="rastreio-status-title" style={{color: 'var(--primary)', marginBottom: '0.5rem'}}>Status</h2>
-                 <p id="rastreio-status-desc" className="text-muted" style={{fontSize: '0.9rem'}}></p>
-             </div>
+             {resultadoRastreio && (
+               <div style={{marginTop: '2rem', padding: '1.5rem', background: 'var(--bg-main)', border: '1px solid var(--border)', borderRadius: '8px', textAlign: 'center'}}>
+                   <h2 style={{color: 'var(--primary)', marginBottom: '0.5rem'}}>{resultadoRastreio.status}</h2>
+                   <p className="text-muted" style={{fontSize: '0.9rem'}}>{resultadoRastreio.desc}</p>
+               </div>
+             )}
           </div>
         </div>
       )}
@@ -713,10 +744,10 @@ function App() {
               <h2>Calculadora de Tamanho</h2>
               <button className="btn-close" onClick={() => setShowSizeGuide(false)}>✕</button>
             </div>
-            
+
             <div className="size-calculator">
                <p className="text-muted" style={{marginBottom: '1rem', fontSize: '0.9rem'}}>Preencha seus dados para sugerirmos o tamanho ideal (fica salvo no seu celular).</p>
-               
+
                <div style={{display: 'flex', gap: '0.5rem', marginBottom: '1rem'}}>
                   <div className="input-field" style={{flex: 1, marginBottom: 0}}>
                     <label>Altura (cm)</label>
@@ -730,16 +761,16 @@ function App() {
 
                <div className="input-field">
                   <label>Sexo Biológico</label>
-                  <select 
+                  <select
                     style={{width: '100%', padding: '1rem', background: 'var(--bg-main)', border: '1px solid var(--border)', color: 'white', borderRadius: '8px'}}
-                    value={calcData.sexo} 
+                    value={calcData.sexo}
                     onChange={e => setCalcData({...calcData, sexo: e.target.value})}
                   >
                      <option value="M">Masculino</option>
                      <option value="F">Feminino</option>
                   </select>
                </div>
-               
+
                <button className="btn-primary full" style={{padding: '0.8rem', marginTop: '1rem'}} onClick={calcularTamanho}>
                  Descobrir Meu Tamanho
                </button>

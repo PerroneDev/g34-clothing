@@ -3,8 +3,8 @@ import { GoogleLogin } from '@react-oauth/google';
 import { QRCodeSVG } from 'qrcode.react';
 import { CheckCircle, Clock, LogOut, Trash2, LayoutDashboard, Scissors, Package, CheckCheck, Send, MessageSquare, Store, Plus } from 'lucide-react';
 import './index.css';
+import { API_BASE } from './api.js';
 
-const OPCOES_MODELOS = ['Padrão', 'Baby Look', 'Oversized', 'Infantil'];
 const OPCOES_TAMANHOS = ['P', 'M', 'G', 'GG', 'XG', '2 anos', '4 anos', '6 anos', '8 anos', '10 anos', '12 anos', '14 anos', '16 anos', 'Único'];
 
 function Admin() {
@@ -13,12 +13,16 @@ function Admin() {
   const [pedidos, setPedidos] = useState([]);
   const [produtos, setProdutos] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [novoProduto, setNovoProduto] = useState({ nome: '', desc: '', categoria: 'Camisas', preco: '', cores: [], tamanhos: [], modelos: [], precosModelos: {}, imagemCapa: '' });
+  const [novoProduto, setNovoProduto] = useState({ nome: '', desc: '', categoria: 'Camisas', preco: 0, cores: [], tamanhos: [], modelos: [], precosModelos: {}, imagemCapa: '' });
   const [novaCor, setNovaCor] = useState({ nome: '', hex: '#000000' });
-  
+  const [novoModelo, setNovoModelo] = useState('');
+
   // Controle de Abas: 'dashboard' ou 'producao'
   const [activeTab, setActiveTab] = useState('dashboard');
   const [waStatus, setWaStatus] = useState({ isReady: false, qrCode: '' });
+
+  // Modal para adicionar estoque — null quando fechado, ou { produto, cor, tamanho, qtd }
+  const [estoqueModal, setEstoqueModal] = useState(null);
 
   useEffect(() => {
     if (token) {
@@ -32,7 +36,7 @@ function Admin() {
     if (token && activeTab === 'whatsapp') {
       const fetchStatus = async () => {
         try {
-          const res = await fetch('https://g34-api.onrender.com/api/whatsapp/status', {
+          const res = await fetch(`${API_BASE}/api/whatsapp/status`, {
             headers: { 'Authorization': `Bearer ${token}` }
           });
           if (res.ok) {
@@ -51,14 +55,14 @@ function Admin() {
 
   const handleLoginSuccess = async (credentialResponse) => {
     try {
-      const response = await fetch('https://g34-api.onrender.com/api/admin/login', {
+      const response = await fetch(`${API_BASE}/api/admin/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ credential: credentialResponse.credential })
       });
-      
+
       const data = await response.json();
-      
+
       if (response.ok) {
         localStorage.setItem('adminToken', data.token);
         localStorage.setItem('adminUser', JSON.stringify(data.user));
@@ -82,7 +86,7 @@ function Admin() {
   const carregarPedidos = async () => {
     setLoading(true);
     try {
-      const response = await fetch('https://g34-api.onrender.com/api/pedidos', {
+      const response = await fetch(`${API_BASE}/api/pedidos`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       if (response.ok) {
@@ -99,7 +103,7 @@ function Admin() {
 
   const carregarProdutos = async () => {
     try {
-      const response = await fetch('https://g34-api.onrender.com/api/produtos');
+      const response = await fetch(`${API_BASE}/api/produtos`);
       if (response.ok) {
         setProdutos(await response.json());
       }
@@ -110,7 +114,7 @@ function Admin() {
 
   const toggleTamanho = (tam) => {
       setNovoProduto(prev => {
-          const tamanhos = prev.tamanhos.includes(tam) 
+          const tamanhos = prev.tamanhos.includes(tam)
               ? prev.tamanhos.filter(t => t !== tam)
               : [...prev.tamanhos, tam];
           return { ...prev, tamanhos };
@@ -120,10 +124,10 @@ function Admin() {
   const toggleModelo = (mod) => {
       setNovoProduto(prev => {
           const isRemoving = prev.modelos?.includes(mod);
-          const modelos = isRemoving 
+          const modelos = isRemoving
               ? prev.modelos.filter(m => m !== mod)
               : [...(prev.modelos || []), mod];
-          
+
           const precosModelos = { ...(prev.precosModelos || {}) };
           if (isRemoving) {
               delete precosModelos[mod];
@@ -159,6 +163,29 @@ function Admin() {
       }));
   };
 
+  const adicionarModelo = () => {
+      const nome = novoModelo.trim();
+      if (!nome) return;
+      if ((novoProduto.modelos || []).includes(nome)) {
+          alert('Este modelo já foi adicionado.');
+          return;
+      }
+      setNovoProduto(prev => ({
+          ...prev,
+          modelos: [...(prev.modelos || []), nome]
+      }));
+      setNovoModelo('');
+  };
+
+  const removerModelo = (mod) => {
+      setNovoProduto(prev => {
+          const modelos = prev.modelos.filter(m => m !== mod);
+          const precosModelos = { ...prev.precosModelos };
+          delete precosModelos[mod];
+          return { ...prev, modelos, precosModelos };
+      });
+  };
+
   const handleImageUpload = (e) => {
     const file = e.target.files[0];
     if (file) {
@@ -171,22 +198,31 @@ function Admin() {
   };
 
   const salvarProduto = async () => {
-    if (!novoProduto.nome || !novoProduto.preco) return alert('Preencha nome e preço.');
-    
+    if (!novoProduto.nome) return alert('Preencha o nome do produto.');
+    if (!novoProduto.modelos || novoProduto.modelos.length === 0) return alert('Adicione ao menos um modelo/variação.');
+
+    // Calcula preco automaticamente como o menor valor entre os precosModelos
+    const precos = Object.values(novoProduto.precosModelos || {})
+        .map(v => parseFloat(v))
+        .filter(v => !isNaN(v) && v > 0);
+
+    if (precos.length === 0) return alert('Defina o preço de ao menos um modelo.');
+
     const payload = {
         ...novoProduto,
-        preco: parseFloat(novoProduto.preco)
+        preco: Math.min(...precos) // menor preço como referência base
     };
 
     try {
-      const res = await fetch('https://g34-api.onrender.com/api/admin/produtos', {
+      const res = await fetch(`${API_BASE}/api/admin/produtos`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
         body: JSON.stringify(payload)
       });
       if (res.ok) {
         carregarProdutos();
-        setNovoProduto({ nome: '', desc: '', categoria: 'Camisas', preco: '', cores: [], tamanhos: [], modelos: [], precosModelos: {}, imagemCapa: '' });
+        setNovoProduto({ nome: '', desc: '', categoria: 'Camisas', preco: 0, cores: [], tamanhos: [], modelos: [], precosModelos: {}, imagemCapa: '' });
+        setNovoModelo('');
         alert('Produto salvo com sucesso!');
       } else {
         alert('Erro ao salvar produto.');
@@ -199,7 +235,7 @@ function Admin() {
   const excluirProduto = async (id) => {
     if (!confirm('Excluir este produto do catálogo?')) return;
     try {
-      const res = await fetch(`https://g34-api.onrender.com/api/admin/produtos/${id}`, {
+      const res = await fetch(`${API_BASE}/api/admin/produtos/${id}`, {
         method: 'DELETE',
         headers: { 'Authorization': `Bearer ${token}` }
       });
@@ -211,38 +247,49 @@ function Admin() {
     }
   };
 
-  const adicionarEstoque = async (produto) => {
-      const cor = prompt('Qual a COR da peça a pronta entrega? (ex: Preto)');
-      const tamanho = prompt('Qual o TAMANHO? (ex: M)');
-      const qtdStr = prompt('Quantas unidades?');
-      if (!cor || !tamanho || !qtdStr) return;
+  // Abre o modal de adicionar estoque para um produto
+  const adicionarEstoque = (produto) => {
+      setEstoqueModal({ produto, cor: '', tamanho: '', qtd: '' });
+  };
 
+  // Confirma a adição de estoque a partir do modal
+  const confirmarEstoque = async () => {
+      const { produto, cor, tamanho, qtd: qtdStr } = estoqueModal;
+
+      if (!cor.trim() || !tamanho.trim() || !qtdStr) {
+          alert('Preencha todos os campos.');
+          return;
+      }
       const qtd = parseInt(qtdStr);
-      if (isNaN(qtd) || qtd <= 0) return alert('Quantidade inválida');
+      if (isNaN(qtd) || qtd <= 0) {
+          alert('Quantidade inválida.');
+          return;
+      }
 
-      // Clona o produto e adiciona o estoque
       const payload = { ...produto };
       const idEstoque = `${produto.id}-${cor.toLowerCase()}-${tamanho.toLowerCase()}-${Math.random().toString(36).substr(2, 4)}`;
-      
-      const idx = payload.estoqueLocal.findIndex(e => e.cor.toLowerCase() === cor.toLowerCase() && e.tamanho.toLowerCase() === tamanho.toLowerCase());
-      
+      const idx = payload.estoqueLocal.findIndex(
+          e => e.cor.toLowerCase() === cor.toLowerCase() && e.tamanho.toLowerCase() === tamanho.toLowerCase()
+      );
+
       if (idx > -1) {
           payload.estoqueLocal[idx].qtd += qtd;
       } else {
-          payload.estoqueLocal.push({ id: idEstoque, cor, tamanho, qtd });
+          payload.estoqueLocal.push({ id: idEstoque, cor: cor.trim(), tamanho: tamanho.trim(), qtd });
       }
 
       try {
-        const res = await fetch(`https://g34-api.onrender.com/api/admin/produtos/${produto.id}`, {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-            body: JSON.stringify(payload)
-        });
-        if (res.ok) {
-            carregarProdutos();
-        } else {
-            alert('Erro ao atualizar estoque');
-        }
+          const res = await fetch(`${API_BASE}/api/admin/produtos/${produto.id}`, {
+              method: 'PUT',
+              headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+              body: JSON.stringify(payload)
+          });
+          if (res.ok) {
+              carregarProdutos();
+              setEstoqueModal(null);
+          } else {
+              alert('Erro ao atualizar estoque');
+          }
       } catch (err) {
           alert('Erro de conexão');
       }
@@ -250,14 +297,14 @@ function Admin() {
 
   const aprovarPedido = async (id) => {
     if (!confirm("Tem certeza que deseja marcar este pedido como aprovado/em produção? Isso enviará uma mensagem no WhatsApp do cliente.")) return;
-    
+
     try {
-      const response = await fetch(`https://g34-api.onrender.com/api/pedidos/${id}/aprovar`, {
+      const response = await fetch(`${API_BASE}/api/pedidos/${id}/aprovar`, {
         method: 'PUT',
         headers: { 'Authorization': `Bearer ${token}` }
       });
       if (response.ok) {
-        carregarPedidos(); // Recarrega a lista
+        carregarPedidos();
       } else {
         alert("Erro ao aprovar pedido.");
       }
@@ -268,9 +315,9 @@ function Admin() {
 
   const excluirPedido = async (id) => {
     if (!confirm("Tem certeza que deseja EXCLUIR este pedido permanentemente?")) return;
-    
+
     try {
-      const response = await fetch(`https://g34-api.onrender.com/api/pedidos/${id}`, {
+      const response = await fetch(`${API_BASE}/api/pedidos/${id}`, {
         method: 'DELETE',
         headers: { 'Authorization': `Bearer ${token}` }
       });
@@ -286,7 +333,7 @@ function Admin() {
 
   const alternarItemPronto = async (pedidoId, itemId) => {
     try {
-      const response = await fetch(`https://g34-api.onrender.com/api/pedidos/${pedidoId}/item/${itemId}/pronto`, {
+      const response = await fetch(`${API_BASE}/api/pedidos/${pedidoId}/item/${itemId}/pronto`, {
         method: 'PUT',
         headers: { 'Authorization': `Bearer ${token}` }
       });
@@ -301,7 +348,7 @@ function Admin() {
   const notificarPronto = async (id) => {
     if (!confirm("Enviar mensagem de WhatsApp avisando que o pedido está pronto para retirada?")) return;
     try {
-      const response = await fetch(`https://g34-api.onrender.com/api/pedidos/${id}/notificar-pronto`, {
+      const response = await fetch(`${API_BASE}/api/pedidos/${id}/notificar-pronto`, {
         method: 'POST',
         headers: { 'Authorization': `Bearer ${token}` }
       });
@@ -318,7 +365,7 @@ function Admin() {
   const marcarComoEntregue = async (id) => {
     if (!confirm("Marcar este pedido como entregue ao cliente?")) return;
     try {
-      const response = await fetch(`https://g34-api.onrender.com/api/pedidos/${id}/entregar`, {
+      const response = await fetch(`${API_BASE}/api/pedidos/${id}/entregar`, {
         method: 'PUT',
         headers: { 'Authorization': `Bearer ${token}` }
       });
@@ -333,12 +380,10 @@ function Admin() {
   };
 
   // --- CÁLCULOS FINANCEIROS ---
-  // Apenas pedidos "Em Produção" ou "Finalizado" (Aprovados) contam para faturamento real,
-  // mas podemos mostrar o "Potencial" também se quiser. Vamos usar só os Aprovados como Dinheiro em Caixa.
   const pedidosAprovados = pedidos.filter(p => p.status !== 'Aguardando Pagamento');
-  
+
   const faturamentoTotal = pedidosAprovados.reduce((acc, p) => acc + (p.valorTotal || 0), 0);
-  
+
   const camisasVendidas = pedidosAprovados.reduce((acc, p) => {
     const qtdePedido = p.itens?.reduce((soma, item) => soma + (item.quantidade || 1), 0) || 0;
     return acc + qtdePedido;
@@ -347,7 +392,6 @@ function Admin() {
   const ticketMedio = pedidosAprovados.length > 0 ? faturamentoTotal / pedidosAprovados.length : 0;
 
   // --- LISTA DE PRODUÇÃO ---
-  // Monta uma lista flat com todas as camisas aprovadas para a aba de produção
   const itensParaProducao = [];
   pedidosAprovados.forEach(p => {
     if (p.itens) {
@@ -365,7 +409,7 @@ function Admin() {
     }
   });
 
-  const pedidosProntos = pedidos.filter(p => p.status === 'Aguardando Entrega' || p.status === 'Finalizado');
+  const pedidosProntos = pedidos.filter(p => p.status === 'Aguardando Entrega');
   const pedidosEntregues = pedidos.filter(p => p.status === 'Entregue');
 
 
@@ -378,7 +422,7 @@ function Admin() {
           </div>
           <h2>Acesso Restrito</h2>
           <p>Faça login com a conta Google autorizada da liderança para acessar o painel de pedidos.</p>
-          
+
           <div className="google-btn-wrapper">
             <GoogleLogin
               onSuccess={handleLoginSuccess}
@@ -404,37 +448,37 @@ function Admin() {
 
       {/* Navegação de Abas */}
       <div className="admin-tabs">
-        <button 
+        <button
           className={`admin-tab ${activeTab === 'dashboard' ? 'active' : ''}`}
           onClick={() => setActiveTab('dashboard')}
         >
           <LayoutDashboard size={18}/> Gestão Geral
         </button>
-        <button 
+        <button
           className={`admin-tab ${activeTab === 'catalogo' ? 'active' : ''}`}
           onClick={() => setActiveTab('catalogo')}
         >
           <Store size={18}/> Catálogo
         </button>
-        <button 
+        <button
           className={`admin-tab ${activeTab === 'producao' ? 'active' : ''}`}
           onClick={() => setActiveTab('producao')}
         >
           <Scissors size={18}/> Produção
         </button>
-        <button 
+        <button
           className={`admin-tab ${activeTab === 'prontas' ? 'active' : ''}`}
           onClick={() => setActiveTab('prontas')}
         >
           <Package size={18}/> Prontas
         </button>
-        <button 
+        <button
           className={`admin-tab ${activeTab === 'entregues' ? 'active' : ''}`}
           onClick={() => setActiveTab('entregues')}
         >
           <CheckCheck size={18}/> Entregues
         </button>
-        <button 
+        <button
           className={`admin-tab ${activeTab === 'whatsapp' ? 'active' : ''}`}
           onClick={() => setActiveTab('whatsapp')}
         >
@@ -506,7 +550,7 @@ function Admin() {
                           <td>
                             {pedido.status === 'Aguardando Pagamento' ? (
                               <span className="badge badge-warning"><Clock size={12}/> Aguardando</span>
-                            ) : pedido.status === 'Finalizado' || pedido.status === 'Aguardando Entrega' ? (
+                            ) : pedido.status === 'Aguardando Entrega' ? (
                               <span className="badge badge-success"><Package size={12}/> Prontas</span>
                             ) : pedido.status === 'Entregue' ? (
                               <span className="badge" style={{background: '#8b5cf6', color: '#fff'}}><CheckCheck size={12}/> Entregue</span>
@@ -528,7 +572,7 @@ function Admin() {
                           </td>
                         </tr>
                       ))}
-                      
+
                       {pedidos.length === 0 && (
                         <tr>
                           <td colSpan="7" style={{textAlign: 'center', padding: '2rem'}}>
@@ -550,17 +594,13 @@ function Admin() {
               <h2>Gestão de Catálogo</h2>
               <button className="btn-refresh" onClick={carregarProdutos}>Atualizar</button>
             </div>
-            
+
             <div style={{background: 'var(--bg-main)', padding: '1.5rem', borderRadius: '8px', border: '1px solid var(--border)', marginBottom: '2rem'}}>
                <h3><Plus size={16} style={{display: 'inline', marginRight: '8px'}}/> Adicionar Novo Produto</h3>
                <div style={{display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginTop: '1rem'}}>
                  <div className="input-field">
                     <label>Nome do Produto</label>
                     <input type="text" value={novoProduto.nome} onChange={e => setNovoProduto({...novoProduto, nome: e.target.value})} placeholder="Ex: Camisa Jovem" />
-                 </div>
-                 <div className="input-field">
-                    <label>Preço (R$)</label>
-                    <input type="number" value={novoProduto.preco} onChange={e => setNovoProduto({...novoProduto, preco: e.target.value})} placeholder="Ex: 50.00" />
                  </div>
                  <div className="input-field">
                     <label>Categoria</label>
@@ -575,7 +615,7 @@ function Admin() {
                      <input type="file" accept="image/*" onChange={handleImageUpload} />
                      {novoProduto.imagemCapa && <img src={novoProduto.imagemCapa.startsWith('data:image') || novoProduto.imagemCapa.startsWith('http') ? novoProduto.imagemCapa : `/images/${novoProduto.imagemCapa}`} alt="Preview" style={{marginTop: '10px', height: '60px', borderRadius: '4px', objectFit: 'cover'}} />}
                   </div>
-                 <div className="input-field" style={{ gridColumn: '1 / -1' }}>
+                 <div className="input-field">
                     <label>Descrição Opcional</label>
                     <input type="text" value={novoProduto.desc} onChange={e => setNovoProduto({...novoProduto, desc: e.target.value})} placeholder="Ex: 100% algodão" />
                  </div>
@@ -600,45 +640,57 @@ function Admin() {
                     )}
                  </div>
                  <div className="input-field" style={{ gridColumn: '1 / -1' }}>
-                    <label>Modelos Disponíveis e Preços Customizados</label>
-                    <div style={{display: 'flex', flexDirection: 'column', gap: '0.5rem'}}>
-                        <div style={{display: 'flex', flexWrap: 'wrap', gap: '0.5rem'}}>
-                            {OPCOES_MODELOS.map(mod => (
-                                <button 
-                                    key={mod}
-                                    type="button"
-                                    className={`pill size-pill ${(novoProduto.modelos || []).includes(mod) ? 'active' : ''}`}
-                                    onClick={() => toggleModelo(mod)}
-                                    style={{ margin: 0, padding: '0.5rem 1rem', fontSize: '0.85rem' }}
-                                >
-                                    {mod}
-                                </button>
-                            ))}
-                        </div>
-                        
-                        {(novoProduto.modelos && novoProduto.modelos.length > 0) && (
-                            <div style={{display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem', marginTop: '1rem', background: 'var(--bg-main)', padding: '1rem', borderRadius: '8px'}}>
-                                {novoProduto.modelos.map(mod => (
-                                    <div key={'preco-'+mod} className="input-field" style={{marginBottom: 0}}>
-                                        <label style={{fontSize: '0.8rem'}}>Preço: {mod} (R$)</label>
-                                        <input 
-                                            type="number" 
-                                            value={(novoProduto.precosModelos && novoProduto.precosModelos[mod]) || ''} 
-                                            onChange={e => setPrecoModelo(mod, e.target.value)} 
-                                            placeholder={`Ex: ${novoProduto.preco || '50.00'}`} 
-                                            style={{padding: '0.5rem', fontSize: '0.9rem'}}
-                                        />
-                                    </div>
-                                ))}
-                            </div>
-                        )}
+                    <label>Modelos / Variações e Preços</label>
+                    {/* Input para adicionar modelo livre */}
+                    <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1rem', alignItems: 'center' }}>
+                       <input
+                          type="text"
+                          value={novoModelo}
+                          onChange={e => setNovoModelo(e.target.value)}
+                          onKeyDown={e => e.key === 'Enter' && adicionarModelo()}
+                          placeholder="Nome do modelo (ex: Padrão, Baby Look, Estonada...)"
+                          style={{ flex: 1 }}
+                       />
+                       <button className="btn-approve" onClick={adicionarModelo} style={{ background: 'var(--primary)', whiteSpace: 'nowrap' }}>
+                          + Adicionar Modelo
+                       </button>
                     </div>
+                    {/* Lista de modelos com preço individual */}
+                    {(novoProduto.modelos && novoProduto.modelos.length > 0) && (
+                       <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                          {novoProduto.modelos.map(mod => (
+                             <div key={mod} style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', background: 'var(--bg-surface)', padding: '0.5rem 0.75rem', borderRadius: '6px', border: '1px solid var(--border)' }}>
+                                <span style={{ flex: '0 0 auto', fontWeight: 500, minWidth: '120px' }}>{mod}</span>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', flex: 1 }}>
+                                   <span style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>R$</span>
+                                   <input
+                                      type="number"
+                                      min="0"
+                                      step="0.01"
+                                      value={(novoProduto.precosModelos && novoProduto.precosModelos[mod]) || ''}
+                                      onChange={e => setPrecoModelo(mod, e.target.value)}
+                                      placeholder="0,00"
+                                      style={{ width: '100px', padding: '0.4rem 0.5rem', fontSize: '0.9rem' }}
+                                   />
+                                </div>
+                                <button className="btn-logout" title={`Remover ${mod}`} onClick={() => removerModelo(mod)} style={{ padding: '4px' }}>
+                                   <Trash2 size={14}/>
+                                </button>
+                             </div>
+                          ))}
+                       </div>
+                    )}
+                    {(!novoProduto.modelos || novoProduto.modelos.length === 0) && (
+                       <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', marginTop: '0.5rem' }}>
+                          Adicione ao menos um modelo para definir os preços.
+                       </p>
+                    )}
                  </div>
                  <div className="input-field" style={{ gridColumn: '1 / -1' }}>
                     <label>Tamanhos Disponíveis</label>
                     <div style={{display: 'flex', flexWrap: 'wrap', gap: '0.5rem'}}>
                         {OPCOES_TAMANHOS.map(tam => (
-                            <button 
+                            <button
                                 key={tam}
                                 type="button"
                                 className={`pill size-pill ${novoProduto.tamanhos.includes(tam) ? 'active' : ''}`}
@@ -742,9 +794,9 @@ function Admin() {
                     <tr key={item._id || `fallback-${idx}`} className={item.pronto ? 'item-pronto' : ''}>
                       <td>
                         <label className="checkbox-container">
-                          <input 
-                            type="checkbox" 
-                            checked={item.pronto} 
+                          <input
+                            type="checkbox"
+                            checked={item.pronto}
                             onChange={() => alternarItemPronto(item.pedidoId, item._id)}
                           />
                           <span className="checkmark"></span>
@@ -778,7 +830,7 @@ function Admin() {
               <h2>Pedidos Prontos / Aguardando Entrega</h2>
               <button className="btn-refresh" onClick={carregarPedidos}>Atualizar</button>
             </div>
-            
+
             <div className="table-responsive">
               <table className="admin-table">
                 <thead>
@@ -820,7 +872,7 @@ function Admin() {
                       </td>
                     </tr>
                   ))}
-                  
+
                   {pedidosProntos.length === 0 && (
                     <tr>
                       <td colSpan="5" style={{textAlign: 'center', padding: '2rem'}}>
@@ -840,7 +892,7 @@ function Admin() {
               <h2>Pedidos Entregues</h2>
               <button className="btn-refresh" onClick={carregarPedidos}>Atualizar</button>
             </div>
-            
+
             <div className="table-responsive">
               <table className="admin-table">
                 <thead>
@@ -871,7 +923,7 @@ function Admin() {
                       <td><strong>R$ {pedido.valorTotal.toFixed(2).replace('.', ',')}</strong></td>
                     </tr>
                   ))}
-                  
+
                   {pedidosEntregues.length === 0 && (
                     <tr>
                       <td colSpan="4" style={{textAlign: 'center', padding: '2rem'}}>
@@ -911,6 +963,54 @@ function Admin() {
           </div>
         )}
       </main>
+
+      {/* MODAL DE ADICIONAR ESTOQUE */}
+      {estoqueModal && (
+        <div className="modal-overlay" onClick={() => setEstoqueModal(null)}>
+          <div className="modal-content" onClick={e => e.stopPropagation()} style={{maxWidth: '400px'}}>
+            <div className="modal-header">
+              <h2>Adicionar Estoque</h2>
+              <button className="btn-close" onClick={() => setEstoqueModal(null)}>✕</button>
+            </div>
+            <p style={{color: 'var(--text-muted)', marginBottom: '1.5rem', fontSize: '0.9rem'}}>
+              Produto: <strong style={{color: 'white'}}>{estoqueModal.produto.nome}</strong>
+            </p>
+            <div style={{display: 'flex', flexDirection: 'column', gap: '1rem'}}>
+              <div className="input-field" style={{marginBottom: 0}}>
+                <label>Cor</label>
+                <input
+                  type="text"
+                  placeholder="Ex: Preto"
+                  value={estoqueModal.cor}
+                  onChange={e => setEstoqueModal(prev => ({...prev, cor: e.target.value}))}
+                />
+              </div>
+              <div className="input-field" style={{marginBottom: 0}}>
+                <label>Tamanho</label>
+                <input
+                  type="text"
+                  placeholder="Ex: M"
+                  value={estoqueModal.tamanho}
+                  onChange={e => setEstoqueModal(prev => ({...prev, tamanho: e.target.value}))}
+                />
+              </div>
+              <div className="input-field" style={{marginBottom: 0}}>
+                <label>Quantidade</label>
+                <input
+                  type="number"
+                  placeholder="Ex: 10"
+                  min="1"
+                  value={estoqueModal.qtd}
+                  onChange={e => setEstoqueModal(prev => ({...prev, qtd: e.target.value}))}
+                />
+              </div>
+              <button className="btn-primary full" style={{marginTop: '0.5rem'}} onClick={confirmarEstoque}>
+                Confirmar Estoque
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

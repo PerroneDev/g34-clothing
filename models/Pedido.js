@@ -9,23 +9,23 @@ const itemSchema = new mongoose.Schema({
     preco: { type: Number, required: true },
     pronto: { type: Boolean, default: false },
     isProntaEntrega: { type: Boolean, default: false }
-}, { _id: true }); // Mudei para _id: true para podermos dar "check" em itens específicos
+}, { _id: true }); // _id: true para podermos dar "check" em itens específicos
 
 const pedidoSchema = new mongoose.Schema({
-    pedidoId: { type: String, required: false },
+    pedidoId: { type: String, required: false, unique: true, sparse: true }, // sparse: true aceita null sem conflito
     nome: { type: String, required: true },
     telefone: { type: String, required: true },
-    itens: [itemSchema], // Lista de camisas
+    itens: [itemSchema],
     valorTotal: { type: Number, required: true },
-    formaPagamento: { 
-        type: String, 
-        required: true, 
-        enum: ['PIX', 'DINHEIRO', 'CREDITO'] 
+    formaPagamento: {
+        type: String,
+        required: true,
+        enum: ['PIX', 'DINHEIRO', 'CREDITO']
     },
-    status: { 
-        type: String, 
+    status: {
+        type: String,
         default: 'Aguardando Pagamento',
-        enum: ['Aguardando Pagamento', 'Em Produção', 'Aguardando Entrega', 'Entregue', 'Finalizado'] 
+        enum: ['Aguardando Pagamento', 'Em Produção', 'Aguardando Entrega', 'Entregue']
     },
     dataPedido: { type: Date, default: Date.now }
 });

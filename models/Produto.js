@@ -11,7 +11,7 @@ const produtoSchema = new mongoose.Schema({
     nome: { type: String, required: true },
     desc: { type: String },
     categoria: { type: String, required: true },
-    preco: { type: Number, required: true },
+    preco: { type: Number, required: false, default: 0 },
     cores: [{
         nome: { type: String, required: true },
         hex: { type: String, required: true }

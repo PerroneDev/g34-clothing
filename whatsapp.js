@@ -78,7 +78,7 @@ const useMongoDBAuthState = async (collection) => {
     };
 };
 
-const inicializarWhatsApp = async () => {
+const inicializarWhatsApp = async () => { // eslint-disable-line no-unused-vars
     console.log('🔄 Inicializando bot do WhatsApp com Baileys e MongoDB...');
 
     const { state, saveCreds } = await useMongoDBAuthState(AuthState);
@@ -238,4 +238,5 @@ async function enviarMensagemPronto(telefone) {
     }
 }
 
-module.exports = { client, inicializarWhatsApp, getWhatsAppStatus, enviarMensagemPedido, atualizarEtiquetaPedido, enviarMensagemAprovacao, enviarMensagemPronto };
+module.exports = { inicializarWhatsApp, getWhatsAppStatus, enviarMensagemPedido, atualizarEtiquetaPedido, enviarMensagemAprovacao, enviarMensagemPronto };
+
