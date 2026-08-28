@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { GoogleLogin } from '@react-oauth/google';
 import { QRCodeSVG } from 'qrcode.react';
-import { CheckCircle, Clock, LogOut, Trash2, LayoutDashboard, Scissors, Package, CheckCheck, Send, MessageSquare, Store, Plus } from 'lucide-react';
+import { CheckCircle, Clock, LogOut, Trash2, LayoutDashboard, Scissors, Package, CheckCheck, Send, MessageSquare, Store, Plus, Pencil, X } from 'lucide-react';
 import './index.css';
 import { API_BASE } from './api.js';
 
@@ -23,6 +23,11 @@ function Admin() {
 
   // Modal para adicionar estoque — null quando fechado, ou { produto, cor, tamanho, qtd }
   const [estoqueModal, setEstoqueModal] = useState(null);
+
+  // Modal de edição de produto — null quando fechado, ou o produto completo clonado para edição
+  const [produtoEditando, setProdutoEditando] = useState(null);
+  const [novoModeloEdit, setNovoModeloEdit] = useState('');
+  const [novaCorEdit, setNovaCorEdit] = useState({ nome: '', hex: '#000000' });
 
   useEffect(() => {
     if (token) {
@@ -246,6 +251,111 @@ function Admin() {
       alert('Erro de conexão.');
     }
   };
+
+  // ─── EDIÇÃO DE PRODUTO ──────────────────────────────────────────────────────
+
+  const abrirEdicao = (produto) => {
+    // Clona profundamente para não mutar o estado de listagem
+    const clone = {
+      ...produto,
+      cores: Array.isArray(produto.cores) ? produto.cores.map(c => ({ ...c })) : [],
+      tamanhos: [...(produto.tamanhos || [])],
+      modelos: [...(produto.modelos || [])],
+      precosModelos: { ...(produto.precosModelos || {}) },
+    };
+    setProdutoEditando(clone);
+    setNovoModeloEdit('');
+    setNovaCorEdit({ nome: '', hex: '#000000' });
+  };
+
+  const fecharEdicao = () => {
+    setProdutoEditando(null);
+    setNovoModeloEdit('');
+    setNovaCorEdit({ nome: '', hex: '#000000' });
+  };
+
+  const salvarEdicao = async () => {
+    if (!produtoEditando.nome) return alert('Preencha o nome do produto.');
+    if (!produtoEditando.modelos || produtoEditando.modelos.length === 0) return alert('Adicione ao menos um modelo/variação.');
+
+    const precos = Object.values(produtoEditando.precosModelos || {})
+      .map(v => parseFloat(v))
+      .filter(v => !isNaN(v) && v > 0);
+    if (precos.length === 0) return alert('Defina o preço de ao menos um modelo.');
+
+    const payload = { ...produtoEditando, preco: Math.min(...precos) };
+    const id = produtoEditando.id || produtoEditando._id;
+
+    try {
+      const res = await fetch(`${API_BASE}/api/admin/produtos/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        body: JSON.stringify(payload)
+      });
+      if (res.ok) {
+        await carregarProdutos();
+        fecharEdicao();
+        alert('Produto atualizado com sucesso!');
+      } else {
+        alert('Erro ao salvar alterações.');
+      }
+    } catch (err) {
+      alert('Erro de conexão.');
+    }
+  };
+
+  // Helpers exclusivos do modal de edição
+  const editAdicionarCor = () => {
+    if (!novaCorEdit.nome || !novaCorEdit.hex) return;
+    if (produtoEditando.cores.some(c => c.nome === novaCorEdit.nome)) return alert('Cor já adicionada.');
+    setProdutoEditando(prev => ({ ...prev, cores: [...prev.cores, { ...novaCorEdit }] }));
+    setNovaCorEdit({ nome: '', hex: '#000000' });
+  };
+
+  const editRemoverCor = (index) => {
+    setProdutoEditando(prev => ({ ...prev, cores: prev.cores.filter((_, i) => i !== index) }));
+  };
+
+  const editAdicionarModelo = () => {
+    const nome = novoModeloEdit.trim();
+    if (!nome) return;
+    if ((produtoEditando.modelos || []).includes(nome)) return alert('Modelo já adicionado.');
+    setProdutoEditando(prev => ({ ...prev, modelos: [...(prev.modelos || []), nome] }));
+    setNovoModeloEdit('');
+  };
+
+  const editRemoverModelo = (mod) => {
+    setProdutoEditando(prev => {
+      const modelos = prev.modelos.filter(m => m !== mod);
+      const precosModelos = { ...prev.precosModelos };
+      delete precosModelos[mod];
+      return { ...prev, modelos, precosModelos };
+    });
+  };
+
+  const editSetPrecoModelo = (mod, valor) => {
+    setProdutoEditando(prev => ({ ...prev, precosModelos: { ...prev.precosModelos, [mod]: valor } }));
+  };
+
+  const editToggleTamanho = (tam) => {
+    setProdutoEditando(prev => ({
+      ...prev,
+      tamanhos: prev.tamanhos.includes(tam)
+        ? prev.tamanhos.filter(t => t !== tam)
+        : [...prev.tamanhos, tam]
+    }));
+  };
+
+  const editHandleImageUpload = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => setProdutoEditando(prev => ({ ...prev, imagemCapa: reader.result }));
+      reader.readAsDataURL(file);
+    }
+  };
+
+  // ────────────────────────────────────────────────────────────────────────────
 
   // Abre o modal de adicionar estoque para um produto
   const adicionarEstoque = (produto) => {
@@ -749,11 +859,16 @@ function Admin() {
                            + Adicionar Estoque
                         </button>
                       </td>
-                      <td style={{textAlign: 'right'}}>
-                         <button className="btn-logout" title="Excluir Produto" onClick={() => excluirProduto(p.id || p._id)}>
-                            <Trash2 size={16}/>
-                         </button>
-                      </td>
+                       <td style={{textAlign: 'right'}}>
+                          <div style={{display: 'flex', gap: '0.5rem', justifyContent: 'flex-end'}}>
+                            <button className="btn-approve" title="Editar Produto" onClick={() => abrirEdicao(p)} style={{padding: '0.4rem 0.6rem', background: 'var(--bg-surface)', border: '1px solid var(--border)'}}>
+                               <Pencil size={15}/>
+                            </button>
+                            <button className="btn-logout" title="Excluir Produto" onClick={() => excluirProduto(p.id || p._id)}>
+                               <Trash2 size={15}/>
+                            </button>
+                          </div>
+                       </td>
                     </tr>
                   ))}
                   {produtos.length === 0 && (
@@ -962,6 +1077,139 @@ function Admin() {
           </div>
         )}
       </main>
+
+      {/* MODAL DE EDIÇÃO DE PRODUTO */}
+      {produtoEditando && (
+        <div className="modal-overlay" onClick={fecharEdicao}>
+          <div className="modal-content" onClick={e => e.stopPropagation()} style={{maxWidth: '640px', maxHeight: '90vh', overflowY: 'auto'}}>
+            <div className="modal-header" style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center'}}>
+              <h2>✏️ Editar Produto</h2>
+              <button onClick={fecharEdicao} style={{background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)'}}>
+                <X size={20}/>
+              </button>
+            </div>
+
+            <div style={{display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginTop: '1rem'}}>
+
+              {/* Nome */}
+              <div className="input-field">
+                <label>Nome do Produto</label>
+                <input type="text" value={produtoEditando.nome} onChange={e => setProdutoEditando(p => ({...p, nome: e.target.value}))} />
+              </div>
+
+              {/* Categoria */}
+              <div className="input-field">
+                <label>Categoria</label>
+                <select value={produtoEditando.categoria} onChange={e => setProdutoEditando(p => ({...p, categoria: e.target.value}))} style={{width: '100%', padding: '1rem', background: 'var(--bg-surface)', border: '1px solid var(--border)', color: 'white', borderRadius: '8px'}}>
+                  <option>Camisas</option>
+                  <option>Moletons</option>
+                </select>
+              </div>
+
+              {/* Descrição */}
+              <div className="input-field" style={{gridColumn: '1 / -1'}}>
+                <label>Descrição</label>
+                <input type="text" value={produtoEditando.desc || ''} onChange={e => setProdutoEditando(p => ({...p, desc: e.target.value}))} />
+              </div>
+
+              {/* Imagem */}
+              <div className="input-field" style={{gridColumn: '1 / -1'}}>
+                <label>Imagem da Capa</label>
+                <div style={{display: 'flex', gap: '1rem', alignItems: 'center'}}>
+                  {produtoEditando.imagemCapa && (
+                    <img
+                      src={produtoEditando.imagemCapa.startsWith('data:image') || produtoEditando.imagemCapa.startsWith('http') ? produtoEditando.imagemCapa : `/images/${produtoEditando.imagemCapa}`}
+                      alt="Preview"
+                      style={{height: '60px', width: '60px', objectFit: 'cover', borderRadius: '8px', border: '1px solid var(--border)'}}
+                    />
+                  )}
+                  <input type="file" accept="image/*" onChange={editHandleImageUpload} style={{flex: 1}} />
+                </div>
+              </div>
+
+              {/* Cores */}
+              <div className="input-field" style={{gridColumn: '1 / -1'}}>
+                <label>Cores</label>
+                <div style={{display: 'flex', gap: '0.5rem', marginBottom: '0.75rem', alignItems: 'center', flexWrap: 'wrap'}}>
+                  <input type="text" value={novaCorEdit.nome} onChange={e => setNovaCorEdit(c => ({...c, nome: e.target.value}))} placeholder="Nome (ex: Preto)" style={{flex: 1, minWidth: '100px'}} />
+                  <input type="color" value={novaCorEdit.hex} onChange={e => setNovaCorEdit(c => ({...c, hex: e.target.value}))} style={{width: '44px', height: '38px', padding: 0, border: 'none', background: 'none', cursor: 'pointer'}} />
+                  <input type="text" value={novaCorEdit.hex} onChange={e => setNovaCorEdit(c => ({...c, hex: e.target.value}))} placeholder="#000000" style={{width: '90px'}} />
+                  <button className="btn-approve" onClick={editAdicionarCor} style={{background: 'var(--primary)', whiteSpace: 'nowrap'}}>+ Cor</button>
+                </div>
+                <div style={{display: 'flex', flexWrap: 'wrap', gap: '0.4rem'}}>
+                  {produtoEditando.cores.map((c, i) => (
+                    <div key={i} style={{display: 'flex', alignItems: 'center', gap: '0.4rem', background: 'var(--bg-surface)', padding: '0.3rem 0.6rem', borderRadius: '4px', border: '1px solid var(--border)', fontSize: '0.85rem'}}>
+                      <div style={{width: '10px', height: '10px', borderRadius: '50%', background: c.hex}}></div>
+                      {c.nome}
+                      <button onClick={() => editRemoverCor(i)} style={{background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', padding: '0 2px'}}>×</button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Modelos e Preços */}
+              <div className="input-field" style={{gridColumn: '1 / -1'}}>
+                <label>Modelos / Variações e Preços</label>
+                <div style={{display: 'flex', gap: '0.5rem', marginBottom: '0.75rem', alignItems: 'center'}}>
+                  <input
+                    type="text"
+                    value={novoModeloEdit}
+                    onChange={e => setNovoModeloEdit(e.target.value)}
+                    onKeyDown={e => e.key === 'Enter' && editAdicionarModelo()}
+                    placeholder="Nome do modelo"
+                    style={{flex: 1}}
+                  />
+                  <button className="btn-approve" onClick={editAdicionarModelo} style={{background: 'var(--primary)', whiteSpace: 'nowrap'}}>+ Modelo</button>
+                </div>
+                <div style={{display: 'flex', flexDirection: 'column', gap: '0.5rem'}}>
+                  {(produtoEditando.modelos || []).map(mod => (
+                    <div key={mod} style={{display: 'flex', alignItems: 'center', gap: '0.75rem', background: 'var(--bg-surface)', padding: '0.5rem 0.75rem', borderRadius: '6px', border: '1px solid var(--border)'}}>
+                      <span style={{flex: '0 0 auto', fontWeight: 500, minWidth: '110px'}}>{mod}</span>
+                      <span style={{color: 'var(--text-muted)', fontSize: '0.85rem'}}>R$</span>
+                      <input
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        value={(produtoEditando.precosModelos && produtoEditando.precosModelos[mod]) || ''}
+                        onChange={e => editSetPrecoModelo(mod, e.target.value)}
+                        placeholder="0,00"
+                        style={{width: '90px', padding: '0.35rem 0.5rem', fontSize: '0.9rem'}}
+                      />
+                      <button onClick={() => editRemoverModelo(mod)} style={{marginLeft: 'auto', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)'}}>
+                        <Trash2 size={14}/>
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Tamanhos */}
+              <div className="input-field" style={{gridColumn: '1 / -1'}}>
+                <label>Tamanhos Disponíveis</label>
+                <div style={{display: 'flex', flexWrap: 'wrap', gap: '0.5rem'}}>
+                  {OPCOES_TAMANHOS.map(tam => (
+                    <button
+                      key={tam}
+                      type="button"
+                      className={`pill size-pill ${(produtoEditando.tamanhos || []).includes(tam) ? 'active' : ''}`}
+                      onClick={() => editToggleTamanho(tam)}
+                      style={{margin: 0, padding: '0.5rem 1rem', fontSize: '0.85rem'}}
+                    >
+                      {tam}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+            </div>
+
+            <div style={{display: 'flex', gap: '1rem', marginTop: '1.5rem', justifyContent: 'flex-end'}}>
+              <button className="btn-logout" onClick={fecharEdicao}>Cancelar</button>
+              <button className="btn-primary" onClick={salvarEdicao}>💾 Salvar Alterações</button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* MODAL DE ADICIONAR ESTOQUE */}
       {estoqueModal && (
