@@ -821,45 +821,45 @@ function Admin() {
               <table className="admin-table">
                 <thead>
                   <tr>
-                    <th>Produto</th>
-                    <th>Categoria</th>
-                    <th>Preço</th>
-                    <th>Variações</th>
-                    <th>Estoque (Pronta Entrega)</th>
-                    <th style={{textAlign: 'right'}}>Ações</th>
+                    <th className="col-produto">Produto</th>
+                    <th className="col-cat">Categoria</th>
+                    <th className="col-preco">Preço</th>
+                    <th className="col-var">Variações</th>
+                    <th className="col-estoque">Estoque (Pronta Entrega)</th>
+                    <th className="col-acoes" style={{textAlign: 'right'}}>Ações</th>
                   </tr>
                 </thead>
                 <tbody>
                   {produtos.map(p => (
                     <tr key={p.id || p._id}>
-                      <td>
+                      <td className="col-produto">
                         <strong>{p.nome}</strong><br/>
                         <span className="text-muted" style={{fontSize: '0.85rem'}}>{p.desc}</span>
                       </td>
-                      <td>{p.categoria}</td>
-                      <td>R$ {p.preco?.toFixed(2).replace('.', ',')}</td>
-                      <td>
+                      <td className="col-cat">{p.categoria}</td>
+                      <td className="col-preco">R$ {p.preco?.toFixed(2).replace('.', ',')}</td>
+                      <td className="col-var">
                         <div style={{fontSize: '0.85rem', color: 'var(--text-muted)'}}>
                           Mod: {p.modelos?.join(', ') || 'N/A'}<br/>
                           Cores: {p.cores?.map(c => typeof c === 'string' ? c : c.nome).join(', ') || 'N/A'}<br/>
                           Tam: {p.tamanhos?.join(', ') || 'N/A'}
                         </div>
                       </td>
-                      <td>
+                      <td className="col-estoque">
                         {p.estoqueLocal && p.estoqueLocal.length > 0 ? (
-                           <ul style={{fontSize: '0.85rem', paddingLeft: '1rem', color: 'var(--primary)'}}>
+                           <ul style={{fontSize: '0.85rem', paddingLeft: '1rem', color: 'var(--primary)', margin: 0}}>
                              {p.estoqueLocal.map(e => (
                                <li key={e.id}>{e.cor} - {e.tamanho}: <strong>{e.qtd} un</strong></li>
                              ))}
                            </ul>
                         ) : (
-                           <span className="text-muted" style={{fontSize: '0.85rem'}}>Sem estoque físico</span>
+                           <span className="text-muted" style={{fontSize: '0.85rem'}}>Sem estoque</span>
                         )}
                         <button className="btn-approve" style={{marginTop: '0.5rem', background: 'var(--bg-surface)', border: '1px solid var(--border)', fontSize: '0.8rem', padding: '0.3rem 0.6rem'}} onClick={() => adicionarEstoque(p)}>
-                           + Adicionar Estoque
+                           + Estoque
                         </button>
                       </td>
-                       <td style={{textAlign: 'right'}}>
+                       <td className="col-acoes" style={{textAlign: 'right'}}>
                           <div style={{display: 'flex', gap: '0.5rem', justifyContent: 'flex-end'}}>
                             <button className="btn-approve" title="Editar Produto" onClick={() => abrirEdicao(p)} style={{padding: '0.4rem 0.6rem', background: 'var(--bg-surface)', border: '1px solid var(--border)'}}>
                                <Pencil size={15}/>

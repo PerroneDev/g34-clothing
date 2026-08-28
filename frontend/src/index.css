@@ -818,12 +818,38 @@ body {
   width: 100%;
   border-collapse: collapse;
   text-align: left;
+  table-layout: fixed;
 }
 
 .admin-table th, .admin-table td {
   padding: 1rem;
   border-bottom: 1px solid var(--border);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 0;
 }
+
+/* Coluna de ações — sticky à direita, sempre visível */
+.admin-table th.col-acoes,
+.admin-table td.col-acoes {
+  position: sticky;
+  right: 0;
+  background: var(--bg-card);
+  z-index: 1;
+  width: 90px;
+  max-width: 90px;
+  white-space: nowrap;
+  overflow: visible;
+  box-shadow: -4px 0 8px rgba(0,0,0,0.3);
+}
+
+/* Larguras fixas das colunas do catálogo */
+.col-produto  { width: 30%; }
+.col-cat      { width: 12%; }
+.col-preco    { width: 12%; }
+.col-var      { width: 28%; }
+.col-estoque  { width: 18%; }
 
 .admin-table th {
   color: var(--text-muted);
