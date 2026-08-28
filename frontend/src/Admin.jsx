@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { GoogleLogin } from '@react-oauth/google';
 import { QRCodeSVG } from 'qrcode.react';
-import { CheckCircle, Clock, LogOut, Trash2, LayoutDashboard, Scissors, Package, CheckCheck, Send, MessageSquare, Store, Plus, Pencil, X } from 'lucide-react';
+import { CheckCircle, Clock, LogOut, Trash2, LayoutDashboard, Scissors, Package, CheckCheck, Send, MessageSquare, Store, Plus, Pencil, X, Settings } from 'lucide-react';
 import './index.css';
 import { API_BASE } from './api.js';
 
@@ -20,6 +20,7 @@ function Admin() {
   // Controle de Abas: 'dashboard' ou 'producao'
   const [activeTab, setActiveTab] = useState('dashboard');
   const [waStatus, setWaStatus] = useState({ isReady: false, qrCode: '' });
+  const [siteConfig, setSiteConfig] = useState({ heroTitulo: '', heroSubtitulo: '', heroBanner: '' });
 
   // Modal para adicionar estoque — null quando fechado, ou { produto, cor, tamanho, qtd }
   const [estoqueModal, setEstoqueModal] = useState(null);
@@ -33,8 +34,21 @@ function Admin() {
     if (token) {
       carregarPedidos();
       carregarProdutos();
+      carregarConfig();
     }
   }, [token]);
+
+  const carregarConfig = async () => {
+    try {
+      const res = await fetch(`${API_BASE}/api/config`);
+      if (res.ok) {
+        const data = await res.json();
+        setSiteConfig(data);
+      }
+    } catch (error) {
+      console.error('Erro ao carregar configuração do site', error);
+    }
+  };
 
   useEffect(() => {
     let interval;
@@ -621,9 +635,90 @@ function Admin() {
         >
           <MessageSquare size={18}/> WhatsApp
         </button>
+        <button
+          className={`admin-tab ${activeTab === 'config' ? 'active' : ''}`}
+          onClick={() => setActiveTab('config')}
+        >
+          <Settings size={18}/> Site
+        </button>
       </div>
 
       <main className="admin-main">
+        {activeTab === 'config' && (
+          <div className="admin-section">
+            <div className="section-header">
+              <h2>Configurações do Site</h2>
+            </div>
+            <div className="admin-card" style={{ maxWidth: '600px' }}>
+              <div className="input-field">
+                <label>Título da Tela Inicial</label>
+                <input 
+                  type="text" 
+                  value={siteConfig.heroTitulo} 
+                  onChange={e => setSiteConfig(prev => ({...prev, heroTitulo: e.target.value}))} 
+                  placeholder="Ex: Coleção G34 2026"
+                />
+              </div>
+              <div className="input-field">
+                <label>Subtítulo da Tela Inicial</label>
+                <input 
+                  type="text" 
+                  value={siteConfig.heroSubtitulo} 
+                  onChange={e => setSiteConfig(prev => ({...prev, heroSubtitulo: e.target.value}))} 
+                  placeholder="Ex: Confira os modelos exclusivos."
+                />
+              </div>
+              <div className="input-field">
+                <label>Imagem de Capa (Banner)</label>
+                <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
+                  {siteConfig.heroBanner && (
+                    <img 
+                      src={siteConfig.heroBanner} 
+                      alt="Banner Preview" 
+                      style={{ height: '60px', width: '100px', objectFit: 'cover', borderRadius: '4px', border: '1px solid var(--border)' }} 
+                    />
+                  )}
+                  <input 
+                    type="file" 
+                    accept="image/*" 
+                    onChange={e => {
+                      const file = e.target.files[0];
+                      if (file) {
+                        const reader = new FileReader();
+                        reader.onloadend = () => setSiteConfig(prev => ({ ...prev, heroBanner: reader.result }));
+                        reader.readAsDataURL(file);
+                      }
+                    }} 
+                    style={{ flex: 1 }} 
+                  />
+                </div>
+              </div>
+              <button 
+                className="btn-primary" 
+                style={{ marginTop: '1rem', width: '100%' }}
+                onClick={async () => {
+                  try {
+                    const res = await fetch(`${API_BASE}/api/admin/config`, {
+                      method: 'PUT',
+                      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                      body: JSON.stringify(siteConfig)
+                    });
+                    if (res.ok) {
+                      alert('Configurações salvas com sucesso!');
+                    } else {
+                      alert('Erro ao salvar configurações.');
+                    }
+                  } catch (e) {
+                    alert('Erro de conexão.');
+                  }
+                }}
+              >
+                💾 Salvar Configurações
+              </button>
+            </div>
+          </div>
+        )}
+
         {activeTab === 'dashboard' && (
           <>
             {/* Visão Financeira */}

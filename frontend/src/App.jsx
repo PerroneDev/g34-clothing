@@ -55,13 +55,20 @@ function App() {
   const [produtos, setProdutos] = useState([]);
   const [loadingProdutos, setLoadingProdutos] = useState(true);
   const [erroProdutos, setErroProdutos] = useState(false);
+  const [siteConfig, setSiteConfig] = useState({
+    heroTitulo: 'Coleção\nG34 2026',
+    heroSubtitulo: 'Confira os modelos exclusivos.',
+    heroBanner: ''
+  });
 
   useEffect(() => {
     const fetchProdutos = async () => {
+      setLoadingProdutos(true);
+      setErroProdutos(false);
       try {
-        const response = await fetch(`${API_BASE}/api/produtos`);
-        if (response.ok) {
-          const data = await response.json();
+        const res = await fetch(`${API_BASE}/api/produtos`);
+        if (res.ok) {
+          const data = await res.json();
           setProdutos(data);
         } else {
           setErroProdutos(true);
@@ -72,7 +79,21 @@ function App() {
       }
       setLoadingProdutos(false);
     };
+
+    const fetchConfig = async () => {
+      try {
+        const res = await fetch(`${API_BASE}/api/config`);
+        if (res.ok) {
+          const data = await res.json();
+          setSiteConfig(data);
+        }
+      } catch (err) {
+        console.error("Erro ao carregar configurações:", err);
+      }
+    };
+
     fetchProdutos();
+    fetchConfig();
   }, []);
 
   const produtosProntaEntrega = produtos.filter(p => p.estoqueLocal && p.estoqueLocal.length > 0);
@@ -337,10 +358,14 @@ function App() {
       {/* TELA 1: VITRINE / CATALOGO */}
       {view === 'catalog' && (
         <div className="view-fade-in">
-          <header className="hero-banner" style={{backgroundImage: 'linear-gradient(rgba(0,0,0,0.5), rgba(0,0,0,0.8)), url("/images/banner-placeholder.jpg")', backgroundSize: 'cover', backgroundPosition: 'center'}}>
+          <header className="hero-banner" style={{
+            backgroundImage: `linear-gradient(rgba(0,0,0,0.5), rgba(0,0,0,0.8)), url("${siteConfig.heroBanner || '/images/banner-placeholder.jpg'}")`, 
+            backgroundSize: 'cover', 
+            backgroundPosition: 'center'
+          }}>
             <div className="hero-content">
-              <h1>Coleção<br />G34 2026</h1>
-              <p>Confira os modelos exclusivos.</p>
+              <h1 style={{ whiteSpace: 'pre-line' }}>{siteConfig.heroTitulo || 'Coleção\nG34 2026'}</h1>
+              <p>{siteConfig.heroSubtitulo || 'Confira os modelos exclusivos.'}</p>
             </div>
           </header>
 

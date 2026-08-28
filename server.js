@@ -8,6 +8,7 @@ const rateLimit = require('express-rate-limit');
 
 const Pedido = require('./models/Pedido');
 const Produto = require('./models/Produto');
+const Config = require('./models/Config');
 const { inicializarWhatsApp, getWhatsAppStatus, enviarMensagemPedido, atualizarEtiquetaPedido, enviarMensagemAprovacao, enviarMensagemPronto } = require('./whatsapp');
 
 const app = express();
@@ -74,6 +75,17 @@ mongoose.connect(process.env.MONGO_URI)
 // ============================================
 // ROTAS DA LOJA (PÚBLICAS)
 // ============================================
+
+app.get('/api/config', async (req, res) => {
+    try {
+        let config = await Config.findOne({ key: 'main' });
+        if (!config) config = await Config.create({ key: 'main' });
+        res.json(config);
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ erro: 'Erro ao buscar configuração' });
+    }
+});
 
 app.get('/api/produtos', async (req, res) => {
     try {
@@ -317,6 +329,25 @@ app.put('/api/pedidos/:id/entregar', verifyToken, async (req, res) => {
 // ============================================
 // GESTÃO DE PRODUTOS (ADMIN)
 // ============================================
+
+app.put('/api/admin/config', verifyToken, async (req, res) => {
+    try {
+        const payload = {
+            heroTitulo: req.body.heroTitulo,
+            heroSubtitulo: req.body.heroSubtitulo,
+            heroBanner: req.body.heroBanner
+        };
+        const config = await Config.findOneAndUpdate(
+            { key: 'main' },
+            { $set: payload },
+            { new: true, upsert: true }
+        );
+        res.json(config);
+    } catch (error) {
+        console.error('Erro ao atualizar configuração:', error);
+        res.status(500).json({ erro: 'Erro ao atualizar configuração' });
+    }
+});
 
 // Campos permitidos para evitar sobrescrita de campos internos via req.body
 const CAMPOS_PRODUTO_PERMITIDOS = ['nome', 'desc', 'categoria', 'preco', 'cores', 'modelos', 'precosModelos', 'coresModelos', 'imagemCapa', 'tamanhos', 'estoqueLocal'];
