@@ -13,7 +13,7 @@ function Admin() {
   const [pedidos, setPedidos] = useState([]);
   const [produtos, setProdutos] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [novoProduto, setNovoProduto] = useState({ nome: '', desc: '', categoria: 'Camisas', preco: 0, cores: [], tamanhos: [], modelos: [], precosModelos: {}, imagemCapa: '' });
+  const [novoProduto, setNovoProduto] = useState({ nome: '', desc: '', categoria: 'Camisas', preco: 0, cores: [], tamanhos: [], modelos: [], precosModelos: {}, coresModelos: {}, imagemCapa: '' });
   const [novaCor, setNovaCor] = useState({ nome: '', hex: '#000000' });
   const [novoModelo, setNovoModelo] = useState('');
 
@@ -186,8 +186,21 @@ function Admin() {
       setNovoProduto(prev => {
           const modelos = prev.modelos.filter(m => m !== mod);
           const precosModelos = { ...prev.precosModelos };
+          const coresModelos = { ...prev.coresModelos };
           delete precosModelos[mod];
-          return { ...prev, modelos, precosModelos };
+          delete coresModelos[mod];
+          return { ...prev, modelos, precosModelos, coresModelos };
+      });
+  };
+
+  // Associa/desassocia uma cor a um modelo específico (form de adicionar)
+  const toggleCorModelo = (mod, corNome) => {
+      setNovoProduto(prev => {
+          const atual = prev.coresModelos[mod] || [];
+          const novaLista = atual.includes(corNome)
+              ? atual.filter(c => c !== corNome)
+              : [...atual, corNome];
+          return { ...prev, coresModelos: { ...prev.coresModelos, [mod]: novaLista } };
       });
   };
 
@@ -328,8 +341,22 @@ function Admin() {
     setProdutoEditando(prev => {
       const modelos = prev.modelos.filter(m => m !== mod);
       const precosModelos = { ...prev.precosModelos };
+      const coresModelos = { ...(prev.coresModelos || {}) };
       delete precosModelos[mod];
-      return { ...prev, modelos, precosModelos };
+      delete coresModelos[mod];
+      return { ...prev, modelos, precosModelos, coresModelos };
+    });
+  };
+
+  // Associa/desassocia uma cor a um modelo (modal de edição)
+  const editToggleCorModelo = (mod, corNome) => {
+    setProdutoEditando(prev => {
+      const coresModelos = { ...(prev.coresModelos || {}) };
+      const atual = coresModelos[mod] || [];
+      const novaLista = atual.includes(corNome)
+        ? atual.filter(c => c !== corNome)
+        : [...atual, corNome];
+      return { ...prev, coresModelos: { ...coresModelos, [mod]: novaLista } };
     });
   };
 
@@ -764,27 +791,48 @@ function Admin() {
                           + Adicionar Modelo
                        </button>
                     </div>
-                    {/* Lista de modelos com preço individual */}
+                    {/* Lista de modelos com preço individual e cores associadas */}
                     {(novoProduto.modelos && novoProduto.modelos.length > 0) && (
-                       <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                       <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
                           {novoProduto.modelos.map(mod => (
-                             <div key={mod} style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', background: 'var(--bg-surface)', padding: '0.5rem 0.75rem', borderRadius: '6px', border: '1px solid var(--border)' }}>
-                                <span style={{ flex: '0 0 auto', fontWeight: 500, minWidth: '120px' }}>{mod}</span>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', flex: 1 }}>
-                                   <span style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>R$</span>
-                                   <input
-                                      type="number"
-                                      min="0"
-                                      step="0.01"
-                                      value={(novoProduto.precosModelos && novoProduto.precosModelos[mod]) || ''}
-                                      onChange={e => setPrecoModelo(mod, e.target.value)}
-                                      placeholder="0,00"
-                                      style={{ width: '100px', padding: '0.4rem 0.5rem', fontSize: '0.9rem' }}
-                                   />
+                             <div key={mod} style={{ background: 'var(--bg-surface)', padding: '0.75rem', borderRadius: '6px', border: '1px solid var(--border)' }}>
+                                {/* Linha: nome + preço + remover */}
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: novoProduto.cores.length > 0 ? '0.6rem' : 0 }}>
+                                   <span style={{ flex: '0 0 auto', fontWeight: 500, minWidth: '120px' }}>{mod}</span>
+                                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', flex: 1 }}>
+                                      <span style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>R$</span>
+                                      <input
+                                         type="number"
+                                         min="0"
+                                         step="0.01"
+                                         value={(novoProduto.precosModelos && novoProduto.precosModelos[mod]) || ''}
+                                         onChange={e => setPrecoModelo(mod, e.target.value)}
+                                         placeholder="0,00"
+                                         style={{ width: '100px', padding: '0.4rem 0.5rem', fontSize: '0.9rem' }}
+                                      />
+                                   </div>
+                                   <button className="btn-logout" title={`Remover ${mod}`} onClick={() => removerModelo(mod)} style={{ padding: '4px' }}>
+                                      <Trash2 size={14}/>
+                                   </button>
                                 </div>
-                                <button className="btn-logout" title={`Remover ${mod}`} onClick={() => removerModelo(mod)} style={{ padding: '4px' }}>
-                                   <Trash2 size={14}/>
-                                </button>
+                                {/* Checkboxes de cores disponíveis para este modelo */}
+                                {novoProduto.cores.length > 0 && (
+                                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem', paddingTop: '0.4rem', borderTop: '1px solid var(--border)' }}>
+                                      <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', width: '100%', marginBottom: '0.2rem' }}>Cores disponíveis neste modelo:</span>
+                                      {novoProduto.cores.map(corObj => {
+                                         const corNome = typeof corObj === 'string' ? corObj : corObj.nome;
+                                         const corHex  = typeof corObj === 'string' ? '#ccc' : corObj.hex;
+                                         const checked = (novoProduto.coresModelos[mod] || []).includes(corNome);
+                                         return (
+                                            <label key={corNome} style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', cursor: 'pointer', fontSize: '0.85rem', background: checked ? 'var(--primary)' : 'var(--bg-card)', padding: '0.2rem 0.6rem', borderRadius: '20px', border: `1px solid ${checked ? 'var(--primary)' : 'var(--border)'}`, transition: 'all 0.15s' }}>
+                                               <div style={{ width: '10px', height: '10px', borderRadius: '50%', background: corHex, flexShrink: 0 }}></div>
+                                               <input type="checkbox" checked={checked} onChange={() => toggleCorModelo(mod, corNome)} style={{ display: 'none' }} />
+                                               {corNome}
+                                            </label>
+                                         );
+                                      })}
+                                   </div>
+                                )}
                              </div>
                           ))}
                        </div>
@@ -1161,23 +1209,44 @@ function Admin() {
                   />
                   <button className="btn-approve" onClick={editAdicionarModelo} style={{background: 'var(--primary)', whiteSpace: 'nowrap'}}>+ Modelo</button>
                 </div>
-                <div style={{display: 'flex', flexDirection: 'column', gap: '0.5rem'}}>
+                <div style={{display: 'flex', flexDirection: 'column', gap: '0.75rem'}}>
                   {(produtoEditando.modelos || []).map(mod => (
-                    <div key={mod} style={{display: 'flex', alignItems: 'center', gap: '0.75rem', background: 'var(--bg-surface)', padding: '0.5rem 0.75rem', borderRadius: '6px', border: '1px solid var(--border)'}}>
-                      <span style={{flex: '0 0 auto', fontWeight: 500, minWidth: '110px'}}>{mod}</span>
-                      <span style={{color: 'var(--text-muted)', fontSize: '0.85rem'}}>R$</span>
-                      <input
-                        type="number"
-                        min="0"
-                        step="0.01"
-                        value={(produtoEditando.precosModelos && produtoEditando.precosModelos[mod]) || ''}
-                        onChange={e => editSetPrecoModelo(mod, e.target.value)}
-                        placeholder="0,00"
-                        style={{width: '90px', padding: '0.35rem 0.5rem', fontSize: '0.9rem'}}
-                      />
-                      <button onClick={() => editRemoverModelo(mod)} style={{marginLeft: 'auto', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)'}}>
-                        <Trash2 size={14}/>
-                      </button>
+                    <div key={mod} style={{background: 'var(--bg-surface)', padding: '0.75rem', borderRadius: '6px', border: '1px solid var(--border)'}}>
+                      {/* Linha: nome + preço + remover */}
+                      <div style={{display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: produtoEditando.cores.length > 0 ? '0.6rem' : 0}}>
+                        <span style={{flex: '0 0 auto', fontWeight: 500, minWidth: '110px'}}>{mod}</span>
+                        <span style={{color: 'var(--text-muted)', fontSize: '0.85rem'}}>R$</span>
+                        <input
+                          type="number"
+                          min="0"
+                          step="0.01"
+                          value={(produtoEditando.precosModelos && produtoEditando.precosModelos[mod]) || ''}
+                          onChange={e => editSetPrecoModelo(mod, e.target.value)}
+                          placeholder="0,00"
+                          style={{width: '90px', padding: '0.35rem 0.5rem', fontSize: '0.9rem'}}
+                        />
+                        <button onClick={() => editRemoverModelo(mod)} style={{marginLeft: 'auto', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)'}}>
+                          <Trash2 size={14}/>
+                        </button>
+                      </div>
+                      {/* Checkboxes de cores disponíveis para este modelo */}
+                      {produtoEditando.cores.length > 0 && (
+                        <div style={{display: 'flex', flexWrap: 'wrap', gap: '0.4rem', paddingTop: '0.4rem', borderTop: '1px solid var(--border)'}}>
+                          <span style={{fontSize: '0.75rem', color: 'var(--text-muted)', width: '100%', marginBottom: '0.2rem'}}>Cores disponíveis neste modelo:</span>
+                          {produtoEditando.cores.map(corObj => {
+                            const corNome = typeof corObj === 'string' ? corObj : corObj.nome;
+                            const corHex  = typeof corObj === 'string' ? '#ccc' : corObj.hex;
+                            const checked = ((produtoEditando.coresModelos || {})[mod] || []).includes(corNome);
+                            return (
+                              <label key={corNome} style={{display: 'flex', alignItems: 'center', gap: '0.35rem', cursor: 'pointer', fontSize: '0.85rem', background: checked ? 'var(--primary)' : 'var(--bg-card)', padding: '0.2rem 0.6rem', borderRadius: '20px', border: `1px solid ${checked ? 'var(--primary)' : 'var(--border)'}`, transition: 'all 0.15s'}}>
+                                <div style={{width: '10px', height: '10px', borderRadius: '50%', background: corHex, flexShrink: 0}}></div>
+                                <input type="checkbox" checked={checked} onChange={() => editToggleCorModelo(mod, corNome)} style={{display: 'none'}} />
+                                {corNome}
+                              </label>
+                            );
+                          })}
+                        </div>
+                      )}
                     </div>
                   ))}
                 </div>

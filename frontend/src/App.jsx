@@ -482,31 +482,45 @@ function App() {
               <div className="selector-group">
                 <h3>1. Cor</h3>
                 <div className="color-pills-row">
-                  {produtoAtual.cores.map(corObj => {
-                    const c = typeof corObj === 'string' ? corObj : corObj.nome;
-                    const hexCor = typeof corObj === 'string' ? (CORES_HEX[c] || '#ccc') : corObj.hex;
-                    let isDisabled = false;
+                  {(() => {
+                    // Filtra cores conforme coresModelos do modelo selecionado
+                    // Se não houver mapeamento configurado, exibe todas as cores (compatibilidade)
+                    const coresDoModelo = produtoAtual.coresModelos && selecaoTemp.tipoModelo
+                      ? produtoAtual.coresModelos[selecaoTemp.tipoModelo]
+                      : null;
+                    const coresFiltradas = (coresDoModelo && coresDoModelo.length > 0)
+                      ? produtoAtual.cores.filter(corObj => {
+                          const nome = typeof corObj === 'string' ? corObj : corObj.nome;
+                          return coresDoModelo.includes(nome);
+                        })
+                      : produtoAtual.cores;
 
-                    if (produtoAtual.modeProntaEntrega) {
-                       const inStock = produtoAtual.estoqueLocal.filter(e => e.cor === c);
-                       const estoqueCor = inStock.reduce((acc, curr) => acc + curr.qtd, 0);
-                       const inCart = inStock.reduce((acc, curr) => acc + getQuantidadeNoCarrinho(produtoAtual.id, curr.cor, curr.tamanho, true), 0);
-                       if (estoqueCor - inCart <= 0) isDisabled = true;
-                    }
+                    return coresFiltradas.map(corObj => {
+                      const c = typeof corObj === 'string' ? corObj : corObj.nome;
+                      const hexCor = typeof corObj === 'string' ? (CORES_HEX[c] || '#ccc') : corObj.hex;
+                      let isDisabled = false;
 
-                    if (isDisabled) return null;
+                      if (produtoAtual.modeProntaEntrega) {
+                         const inStock = produtoAtual.estoqueLocal.filter(e => e.cor === c);
+                         const estoqueCor = inStock.reduce((acc, curr) => acc + curr.qtd, 0);
+                         const inCart = inStock.reduce((acc, curr) => acc + getQuantidadeNoCarrinho(produtoAtual.id, curr.cor, curr.tamanho, true), 0);
+                         if (estoqueCor - inCart <= 0) isDisabled = true;
+                      }
 
-                    return (
-                      <div
-                        key={c}
-                        className={`color-circle-wrapper ${selecaoTemp.cor === c ? 'active' : ''}`}
-                        onClick={() => setSelecaoTemp({ ...selecaoTemp, cor: c, tamanho: '' })}
-                      >
-                        <div className="color-circle" style={{ backgroundColor: hexCor }}></div>
-                        <span className="color-name">{c}</span>
-                      </div>
-                    );
-                  })}
+                      if (isDisabled) return null;
+
+                      return (
+                        <div
+                          key={c}
+                          className={`color-circle-wrapper ${selecaoTemp.cor === c ? 'active' : ''}`}
+                          onClick={() => setSelecaoTemp({ ...selecaoTemp, cor: c, tamanho: '' })}
+                        >
+                          <div className="color-circle" style={{ backgroundColor: hexCor }}></div>
+                          <span className="color-name">{c}</span>
+                        </div>
+                      );
+                    });
+                  })()}
                 </div>
               </div>
 
@@ -521,7 +535,17 @@ function App() {
                       <button
                         key={m}
                         className={`pill size-pill ${selecaoTemp.tipoModelo === m ? 'active' : ''}`}
-                        onClick={() => setSelecaoTemp({ ...selecaoTemp, tipoModelo: m, tamanho: '' })}
+                        onClick={() => {
+                          // Ao trocar modelo, verifica se a cor atual ainda é válida
+                          const coresDoModelo = produtoAtual.coresModelos && produtoAtual.coresModelos[m];
+                          const corAtualValida = !coresDoModelo || coresDoModelo.length === 0 || coresDoModelo.includes(selecaoTemp.cor);
+                          setSelecaoTemp({
+                            ...selecaoTemp,
+                            tipoModelo: m,
+                            tamanho: '',
+                            cor: corAtualValida ? selecaoTemp.cor : ''
+                          });
+                        }}
                         style={{display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px'}}
                       >
                         <span>{m}</span>

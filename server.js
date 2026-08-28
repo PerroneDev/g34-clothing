@@ -319,7 +319,7 @@ app.put('/api/pedidos/:id/entregar', verifyToken, async (req, res) => {
 // ============================================
 
 // Campos permitidos para evitar sobrescrita de campos internos via req.body
-const CAMPOS_PRODUTO_PERMITIDOS = ['nome', 'desc', 'categoria', 'preco', 'cores', 'modelos', 'precosModelos', 'imagemCapa', 'tamanhos', 'estoqueLocal'];
+const CAMPOS_PRODUTO_PERMITIDOS = ['nome', 'desc', 'categoria', 'preco', 'cores', 'modelos', 'precosModelos', 'coresModelos', 'imagemCapa', 'tamanhos', 'estoqueLocal'];
 
 app.post('/api/admin/produtos', verifyToken, async (req, res) => {
     try {

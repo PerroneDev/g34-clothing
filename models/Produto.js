@@ -17,7 +17,8 @@ const produtoSchema = new mongoose.Schema({
         hex: { type: String, required: true }
     }],
     modelos: [{ type: String }],
-    precosModelos: { type: Map, of: Number }, // Map of model name to its custom price
+    precosModelos: { type: Map, of: Number },
+    coresModelos: { type: Map, of: [String] }, // Map de nome do modelo → lista de cores disponíveis
     imagemCapa: { type: String, default: '' },
     tamanhos: [{ type: String }],
     estoqueLocal: [estoqueLocalSchema]
