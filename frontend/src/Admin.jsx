@@ -651,12 +651,13 @@ function Admin() {
             </div>
             <div className="admin-card" style={{ maxWidth: '600px' }}>
               <div className="input-field">
-                <label>Título da Tela Inicial</label>
-                <input 
-                  type="text" 
+                <label>Título da Tela Inicial (Use 'Enter' para pular linha)</label>
+                <textarea 
+                  rows="2"
                   value={siteConfig.heroTitulo} 
                   onChange={e => setSiteConfig(prev => ({...prev, heroTitulo: e.target.value}))} 
-                  placeholder="Ex: Coleção G34 2026"
+                  placeholder="Ex: Coleção&#10;G34 2026"
+                  style={{ width: '100%', padding: '0.75rem', borderRadius: '8px', border: '1px solid var(--border)', background: 'var(--bg-input)', color: 'var(--text-main)' }}
                 />
               </div>
               <div className="input-field">
