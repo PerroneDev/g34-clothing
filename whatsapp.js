@@ -90,11 +90,13 @@ const inicializarWhatsApp = async () => { // eslint-disable-line no-unused-vars
             logger: pino({ level: 'silent' }), // Silencia os logs enormes do Baileys
             printQRInTerminal: false,
             markOnlineOnConnect: false, // <-- Impede o bot de ficar "Online" 24h
+            syncFullHistory: false, // <-- Impede de puxar o histórico antigo
+            generateHighQualityLinkPreview: false, // <-- Economiza banda não gerando previews pesados
+            browser: ['G34 Store', 'Chrome', '1.0.0'],
             auth: {
                 creds: state.creds,
                 keys: makeCacheableSignalKeyStore(state.keys, pino({ level: 'silent' })),
-            },
-            generateHighQualityLinkPreview: true
+            }
         });
 
         client.ev.on('creds.update', saveCreds);
