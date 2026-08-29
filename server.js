@@ -5,6 +5,13 @@ const mongoose = require('mongoose');
 const jwt = require('jsonwebtoken');
 const { OAuth2Client } = require('google-auth-library');
 const rateLimit = require('express-rate-limit');
+const cloudinary = require('cloudinary').v2;
+
+cloudinary.config({
+  cloud_name: 'qb67ajjz',
+  api_key: '256421461398149',
+  api_secret: 'vFGOVJ5L6kY0GmBRuUJy3bqA37A'
+});
 
 const Pedido = require('./models/Pedido');
 const Produto = require('./models/Produto');
@@ -332,10 +339,16 @@ app.put('/api/pedidos/:id/entregar', verifyToken, async (req, res) => {
 
 app.put('/api/admin/config', verifyToken, async (req, res) => {
     try {
+        let heroBannerUrl = req.body.heroBanner;
+        if (heroBannerUrl && heroBannerUrl.startsWith('data:image')) {
+            const uploadRes = await cloudinary.uploader.upload(heroBannerUrl, { folder: 'g34_clothing' });
+            heroBannerUrl = uploadRes.secure_url;
+        }
+
         const payload = {
             heroTitulo: req.body.heroTitulo,
             heroSubtitulo: req.body.heroSubtitulo,
-            heroBanner: req.body.heroBanner
+            heroBanner: heroBannerUrl
         };
         const config = await Config.findOneAndUpdate(
             { key: 'main' },
@@ -358,6 +371,12 @@ app.post('/api/admin/produtos', verifyToken, async (req, res) => {
         CAMPOS_PRODUTO_PERMITIDOS.forEach(campo => {
             if (req.body[campo] !== undefined) dados[campo] = req.body[campo];
         });
+
+        if (dados.imagemCapa && dados.imagemCapa.startsWith('data:image')) {
+            const uploadRes = await cloudinary.uploader.upload(dados.imagemCapa, { folder: 'g34_clothing' });
+            dados.imagemCapa = uploadRes.secure_url;
+        }
+
         const novoProduto = new Produto(dados);
         const salvo = await novoProduto.save();
         res.status(201).json(salvo);
@@ -373,6 +392,11 @@ app.put('/api/admin/produtos/:id', verifyToken, async (req, res) => {
         CAMPOS_PRODUTO_PERMITIDOS.forEach(campo => {
             if (req.body[campo] !== undefined) dados[campo] = req.body[campo];
         });
+
+        if (dados.imagemCapa && dados.imagemCapa.startsWith('data:image')) {
+            const uploadRes = await cloudinary.uploader.upload(dados.imagemCapa, { folder: 'g34_clothing' });
+            dados.imagemCapa = uploadRes.secure_url;
+        }
         const atualizado = await Produto.findByIdAndUpdate(
             req.params.id,
             { $set: dados },
