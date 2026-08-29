@@ -89,6 +89,7 @@ const inicializarWhatsApp = async () => { // eslint-disable-line no-unused-vars
             version,
             logger: pino({ level: 'silent' }), // Silencia os logs enormes do Baileys
             printQRInTerminal: false,
+            markOnlineOnConnect: false, // <-- Impede o bot de ficar "Online" 24h
             auth: {
                 creds: state.creds,
                 keys: makeCacheableSignalKeyStore(state.keys, pino({ level: 'silent' })),
