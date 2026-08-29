@@ -420,4 +420,4 @@ app.delete('/api/admin/produtos/:id', verifyToken, async (req, res) => {
     }
 });
 
-app.listen(3001, () => console.log('📡 API de Pedidos rodando na porta 3001'));
+app.listen(3001, () => console.log('📡 API de Pedidos rodando na porta 3001'));// trigger restart
