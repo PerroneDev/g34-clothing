@@ -196,17 +196,17 @@ async function enviarMensagemPedido(pedido) {
 
         if (pedido.formaPagamento === 'PIX') {
             mensagem += `💳 *Pagamento via PIX*\n\n`;
-            mensagem += `Nossa chave PIX é: *CHAVE-AQUI*\n`;
+            mensagem += `Nossa chave PIX é: *jovensg34@gmail.com*\n`;
             mensagem += `Por favor, envie o *comprovante* respondendo a esta mensagem para confirmarmos seu pedido e liberarmos para a produção.\n\n`;
         } else if (pedido.formaPagamento === 'CREDITO') {
             mensagem += `💳 *Pagamento via Cartão de Crédito*\n\n`;
             mensagem += `Você optou pelo pagamento no Cartão de Crédito.\n\n`;
-            mensagem += `Por favor, procure a *Liderança dos Jovens* no próximo culto para passarmos o cartão na maquininha.\n\n`;
+            mensagem += `Por favor, procure Vitória Perrone, Elias Nogueira ou alguém da Liderança dos Jovens no próximo culto para passarmos o cartão na maquininha.\n\n`;
             mensagem += `Lembrando que o pedido só será liberado para produção após o pagamento.\n\n`;
         } else {
             mensagem += `💵 *Pagamento em Dinheiro*\n\n`;
             mensagem += `Você optou pelo pagamento presencial em Dinheiro.\n\n`;
-            mensagem += `Por favor, procure a *Liderança dos Jovens* no próximo culto para realizar o acerto financeiro.\n\n`;
+            mensagem += `Por favor, procure Vitória Perrone, Elias Nogueira ou alguém da Liderança dos Jovens no próximo culto para realizar o acerto financeiro.\n\n`;
             mensagem += `Lembrando que o pedido só será liberado para produção após o pagamento.\n\n`;
         }
         
@@ -247,7 +247,7 @@ async function enviarMensagemPronto(telefone) {
     if (!isReady || !client) return false;
     try {
         const chatId = formatarNumero(telefone);
-        const mensagem = `👕 *Seu Pedido Está Pronto!*\n\nPassando para avisar que o seu pedido já está pronto para retirada! 🎉\n\nPor favor, procure a *Liderança dos Jovens* na igreja para buscar as suas camisas.\n\nDeus abençoe!`;
+        const mensagem = `👕 *Seu Pedido Está Pronto!*\n\nPassando para avisar que o seu pedido já está pronto para retirada! 🎉\n\nPor favor, procure Vitória Perrone, Elias Nogueira ou alguém da Liderança dos Jovens na igreja para buscar as suas camisas.\n\nDeus abençoe!`;
         await client.sendMessage(chatId, { text: mensagem });
         console.log(`💬 Mensagem de PRONTO enviada para ${telefone}!`);
         return true;
