@@ -136,6 +136,22 @@ const getWhatsAppStatus = () => {
     return { isReady, qrCode: qrCodeData };
 };
 
+const desconectarWhatsApp = async () => {
+    if (client) {
+        try {
+            await client.logout();
+        } catch (err) {
+            console.error('Erro ao fazer logout do Baileys:', err);
+        }
+    }
+    await AuthState.deleteMany({});
+    isReady = false;
+    qrCodeData = '';
+    // Como apagamos tudo, forçamos o encerramento do processo
+    // para que o Render reinicie o servidor com a memória limpa
+    process.exit(1);
+};
+
 /**
  * Função para formatar o número do WhatsApp (Baileys exige @s.whatsapp.net)
  */
@@ -241,5 +257,5 @@ async function enviarMensagemPronto(telefone) {
     }
 }
 
-module.exports = { inicializarWhatsApp, getWhatsAppStatus, enviarMensagemPedido, atualizarEtiquetaPedido, enviarMensagemAprovacao, enviarMensagemPronto };
+module.exports = { inicializarWhatsApp, getWhatsAppStatus, desconectarWhatsApp, enviarMensagemPedido, atualizarEtiquetaPedido, enviarMensagemAprovacao, enviarMensagemPronto };
 

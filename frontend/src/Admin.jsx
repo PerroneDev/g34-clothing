@@ -1218,6 +1218,28 @@ function Admin() {
                 <p style={{color: 'var(--text-muted)'}}>Iniciando o WhatsApp ou aguardando QR Code...</p>
               </div>
             )}
+            
+            <div style={{marginTop: '3rem', borderTop: '1px solid var(--border)', paddingTop: '2rem'}}>
+              <button 
+                className="btn-danger" 
+                onClick={async () => {
+                  if(window.confirm('Tem certeza que deseja sair do WhatsApp e reiniciar a sessão? Isso derrubará a conexão e exigirá a leitura de um novo QR Code.')) {
+                    try {
+                      await fetch(`${API_BASE}/api/whatsapp/reset`, {
+                        method: 'POST',
+                        headers: { 'Authorization': `Bearer ${token}` }
+                      });
+                      alert('Comando enviado! O servidor vai reiniciar. Aguarde alguns instantes até um novo QR Code aparecer.');
+                      setWaStatus({ isReady: false, qrCode: '' });
+                    } catch(e) {
+                      alert('Erro ao tentar desconectar.');
+                    }
+                  }
+                }}
+              >
+                🔄 Desconectar e Reiniciar Sessão
+              </button>
+            </div>
           </div>
         )}
       </main>

@@ -16,7 +16,7 @@ cloudinary.config({
 const Pedido = require('./models/Pedido');
 const Produto = require('./models/Produto');
 const Config = require('./models/Config');
-const { inicializarWhatsApp, getWhatsAppStatus, enviarMensagemPedido, atualizarEtiquetaPedido, enviarMensagemAprovacao, enviarMensagemPronto } = require('./whatsapp');
+const { inicializarWhatsApp, getWhatsAppStatus, desconectarWhatsApp, enviarMensagemPedido, atualizarEtiquetaPedido, enviarMensagemAprovacao, enviarMensagemPronto } = require('./whatsapp');
 
 const app = express();
 
@@ -227,6 +227,14 @@ app.get('/api/pedidos', verifyToken, async (req, res) => {
 // Status do WhatsApp e QR Code
 app.get('/api/whatsapp/status', verifyToken, (req, res) => {
     res.json(getWhatsAppStatus());
+});
+
+app.post('/api/whatsapp/reset', verifyToken, async (req, res) => {
+    res.json({ message: 'Desconectando e limpando sessão. O servidor será reiniciado.' });
+    // Damos um pequeno delay para a resposta chegar ao client
+    setTimeout(() => {
+        desconectarWhatsApp();
+    }, 1000);
 });
 
 // Aprovar Pagamento do Pedido
