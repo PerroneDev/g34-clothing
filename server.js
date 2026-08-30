@@ -360,6 +360,11 @@ app.put('/api/admin/config', verifyToken, async (req, res) => {
         };
         if (req.body.calcAtiva !== undefined) payload.calcAtiva = req.body.calcAtiva;
         if (req.body.tabelaMedidas !== undefined) payload.tabelaMedidas = req.body.tabelaMedidas;
+        if (req.body.msgPix !== undefined) payload.msgPix = req.body.msgPix;
+        if (req.body.msgCredito !== undefined) payload.msgCredito = req.body.msgCredito;
+        if (req.body.msgDinheiro !== undefined) payload.msgDinheiro = req.body.msgDinheiro;
+        if (req.body.msgAprovado !== undefined) payload.msgAprovado = req.body.msgAprovado;
+        if (req.body.msgPronto !== undefined) payload.msgPronto = req.body.msgPronto;
         const config = await Config.findOneAndUpdate(
             { key: 'main' },
             { $set: payload },

@@ -3,6 +3,7 @@ const { default: makeWASocket, DisconnectReason, fetchLatestBaileysVersion, make
 const pino = require('pino');
 const qrcode = require('qrcode-terminal');
 const AuthState = require('./models/AuthState');
+const Config = require('./models/Config');
 
 let client;
 let isReady = false;
@@ -183,6 +184,9 @@ async function enviarMensagemPedido(pedido) {
 
     try {
         const chatId = formatarNumero(pedido.telefone);
+        
+        let config = await Config.findOne({ key: 'main' });
+        if (!config) config = new Config(); // usa defaults
 
         let mensagem = `Olá, *${pedido.nome}*! 🙏\n\nRecebemos o seu pedido da coleção do Congresso!\n\n🔖 *Nº do Pedido:* ${pedido.pedidoId || 'G34-TESTE'}\n\n🛒 *Seus Itens:*\n`;
 
@@ -195,19 +199,11 @@ async function enviarMensagemPedido(pedido) {
         mensagem += `\n💰 *Valor Total: R$ ${pedido.valorTotal.toFixed(2).replace('.', ',')}*\n\n`;
 
         if (pedido.formaPagamento === 'PIX') {
-            mensagem += `💳 *Pagamento via PIX*\n\n`;
-            mensagem += `Nossa chave PIX é: *jovensg34@gmail.com*\n`;
-            mensagem += `Por favor, envie o *comprovante* respondendo a esta mensagem para confirmarmos seu pedido e liberarmos para a produção.\n\n`;
+            mensagem += config.msgPix;
         } else if (pedido.formaPagamento === 'CREDITO') {
-            mensagem += `💳 *Pagamento via Cartão de Crédito*\n\n`;
-            mensagem += `Você optou pelo pagamento no Cartão de Crédito.\n\n`;
-            mensagem += `Por favor, procure Vitória Perrone, Elias Nogueira ou alguém da Liderança dos Jovens no próximo culto para passarmos o cartão na maquininha.\n\n`;
-            mensagem += `Lembrando que o pedido só será liberado para produção após o pagamento.\n\n`;
+            mensagem += config.msgCredito;
         } else {
-            mensagem += `💵 *Pagamento em Dinheiro*\n\n`;
-            mensagem += `Você optou pelo pagamento presencial em Dinheiro.\n\n`;
-            mensagem += `Por favor, procure Vitória Perrone, Elias Nogueira ou alguém da Liderança dos Jovens no próximo culto para realizar o acerto financeiro.\n\n`;
-            mensagem += `Lembrando que o pedido só será liberado para produção após o pagamento.\n\n`;
+            mensagem += config.msgDinheiro;
         }
         
         mensagem += `📍 *Acompanhe seu pedido:*\nVocê pode consultar o status do seu pedido a qualquer momento no nosso site, informando o código *${pedido.pedidoId || 'G34-TESTE'}*.\n\nDeus te abençoe!`;
@@ -229,8 +225,10 @@ async function enviarMensagemPedido(pedido) {
 async function enviarMensagemAprovacao(telefone) {
     if (!isReady || !client) return false;
     try {
+        let config = await Config.findOne({ key: 'main' });
+        if (!config) config = new Config();
         const chatId = formatarNumero(telefone);
-        const mensagem = `✅ *Pagamento Confirmado!*\n\nPassando para avisar que recebemos o seu pagamento e o seu pedido já está *Em Produção*! 🚀\n\nAvisaremos por aqui quando as camisas estiverem prontas para retirada. Deus abençoe!`;
+        const mensagem = config.msgAprovado;
         await client.sendMessage(chatId, { text: mensagem });
         console.log(`💬 Mensagem de APROVAÇÃO enviada para ${telefone}!`);
         return true;
@@ -246,8 +244,10 @@ async function enviarMensagemAprovacao(telefone) {
 async function enviarMensagemPronto(telefone) {
     if (!isReady || !client) return false;
     try {
+        let config = await Config.findOne({ key: 'main' });
+        if (!config) config = new Config();
         const chatId = formatarNumero(telefone);
-        const mensagem = `👕 *Seu Pedido Está Pronto!*\n\nPassando para avisar que o seu pedido já está pronto para retirada! 🎉\n\nPor favor, procure Vitória Perrone, Elias Nogueira ou alguém da Liderança dos Jovens na igreja para buscar as suas camisas.\n\nDeus abençoe!`;
+        const mensagem = config.msgPronto;
         await client.sendMessage(chatId, { text: mensagem });
         console.log(`💬 Mensagem de PRONTO enviada para ${telefone}!`);
         return true;

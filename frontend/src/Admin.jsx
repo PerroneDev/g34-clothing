@@ -20,7 +20,7 @@ function Admin() {
   // Controle de Abas: 'dashboard' ou 'producao'
   const [activeTab, setActiveTab] = useState('dashboard');
   const [waStatus, setWaStatus] = useState({ isReady: false, qrCode: '' });
-  const [siteConfig, setSiteConfig] = useState({ heroTitulo: '', heroSubtitulo: '', heroBanner: '', calcAtiva: false, tabelaMedidas: [] });
+  const [siteConfig, setSiteConfig] = useState({ heroTitulo: '', heroSubtitulo: '', heroBanner: '', calcAtiva: false, tabelaMedidas: [], msgPix: '', msgCredito: '', msgDinheiro: '', msgAprovado: '', msgPronto: '' });
 
   // Modal para adicionar estoque — null quando fechado, ou { produto, cor, tamanho, qtd }
   const [estoqueModal, setEstoqueModal] = useState(null);
@@ -788,6 +788,51 @@ function Admin() {
                   + Adicionar Linha
                 </button>
               </div>
+
+              <div className="input-field" style={{marginTop: '2rem', borderTop: '1px solid var(--border)', paddingTop: '1.5rem'}}>
+                <h3 style={{marginBottom: '1rem'}}>Mensagens Automáticas (WhatsApp)</h3>
+                
+                <label>1. Instruções para pagamento PIX</label>
+                <textarea 
+                  rows="3"
+                  value={siteConfig.msgPix || ''} 
+                  onChange={e => setSiteConfig(prev => ({...prev, msgPix: e.target.value}))} 
+                  style={{ width: '100%', padding: '0.75rem', borderRadius: '8px', border: '1px solid var(--border)', background: 'var(--bg-input)', color: 'var(--text-main)', marginBottom: '1rem' }}
+                />
+
+                <label>2. Instruções para Cartão de Crédito</label>
+                <textarea 
+                  rows="3"
+                  value={siteConfig.msgCredito || ''} 
+                  onChange={e => setSiteConfig(prev => ({...prev, msgCredito: e.target.value}))} 
+                  style={{ width: '100%', padding: '0.75rem', borderRadius: '8px', border: '1px solid var(--border)', background: 'var(--bg-input)', color: 'var(--text-main)', marginBottom: '1rem' }}
+                />
+
+                <label>3. Instruções para Pagamento em Dinheiro</label>
+                <textarea 
+                  rows="3"
+                  value={siteConfig.msgDinheiro || ''} 
+                  onChange={e => setSiteConfig(prev => ({...prev, msgDinheiro: e.target.value}))} 
+                  style={{ width: '100%', padding: '0.75rem', borderRadius: '8px', border: '1px solid var(--border)', background: 'var(--bg-input)', color: 'var(--text-main)', marginBottom: '1rem' }}
+                />
+
+                <label>4. Confirmação de Pagamento ("Aprovar")</label>
+                <textarea 
+                  rows="3"
+                  value={siteConfig.msgAprovado || ''} 
+                  onChange={e => setSiteConfig(prev => ({...prev, msgAprovado: e.target.value}))} 
+                  style={{ width: '100%', padding: '0.75rem', borderRadius: '8px', border: '1px solid var(--border)', background: 'var(--bg-input)', color: 'var(--text-main)', marginBottom: '1rem' }}
+                />
+
+                <label>5. Pedido Pronto ("Tudo Pronto")</label>
+                <textarea 
+                  rows="3"
+                  value={siteConfig.msgPronto || ''} 
+                  onChange={e => setSiteConfig(prev => ({...prev, msgPronto: e.target.value}))} 
+                  style={{ width: '100%', padding: '0.75rem', borderRadius: '8px', border: '1px solid var(--border)', background: 'var(--bg-input)', color: 'var(--text-main)' }}
+                />
+              </div>
+
               <button 
                 className="btn-primary" 
                 style={{ marginTop: '1rem', width: '100%' }}
