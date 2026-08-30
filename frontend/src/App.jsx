@@ -551,7 +551,7 @@ function App() {
 
               <div className="selector-group">
                 <h3>2. Tipo de Produto</h3>
-                <div className="pills-row size-pills">
+                <div className="pills-row model-pills">
                   {(produtoAtual.modelos && produtoAtual.modelos.length > 0 ? produtoAtual.modelos : ['Padrão', 'Baby Look', 'Oversized', 'Infantil']).map(m => {
                     const precoModelo = produtoAtual.precosModelos && produtoAtual.precosModelos[m]
                       ? parseFloat(produtoAtual.precosModelos[m])
@@ -559,7 +559,7 @@ function App() {
                     return (
                       <button
                         key={m}
-                        className={`pill size-pill ${selecaoTemp.tipoModelo === m ? 'active' : ''}`}
+                        className={`pill model-pill ${selecaoTemp.tipoModelo === m ? 'active' : ''}`}
                         onClick={() => {
                           // Ao trocar modelo, verifica se a cor atual ainda é válida
                           const coresDoModelo = produtoAtual.coresModelos && produtoAtual.coresModelos[m];
