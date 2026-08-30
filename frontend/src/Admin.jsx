@@ -264,6 +264,27 @@ function Admin() {
     }
   };
 
+  const removerEstoque = async (produto, index) => {
+      if (!window.confirm('Deseja remover este item do estoque?')) return;
+      const payload = { ...produto };
+      payload.estoqueLocal.splice(index, 1);
+
+      try {
+          const res = await fetch(`${API_BASE}/api/admin/produtos/${produto.id}`, {
+              method: 'PUT',
+              headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+              body: JSON.stringify(payload)
+          });
+          if (res.ok) {
+              carregarProdutos();
+          } else {
+              alert('Erro ao remover estoque');
+          }
+      } catch (err) {
+          alert('Erro de conexão');
+      }
+  };
+
   const excluirProduto = async (id) => {
     if (!confirm('Excluir este produto do catálogo?')) return;
     try {
@@ -992,8 +1013,17 @@ function Admin() {
                       <td className="col-estoque">
                         {p.estoqueLocal && p.estoqueLocal.length > 0 ? (
                            <ul style={{fontSize: '0.85rem', paddingLeft: '1rem', color: 'var(--primary)', margin: 0}}>
-                             {p.estoqueLocal.map(e => (
-                               <li key={e.id}>{e.cor} - {e.tamanho}: <strong>{e.qtd} un</strong></li>
+                             {p.estoqueLocal.map((e, idx) => (
+                               <li key={e.id} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '2px' }}>
+                                 <span>{e.cor} - {e.tamanho}: <strong>{e.qtd} un</strong></span>
+                                 <span 
+                                   onClick={() => removerEstoque(p, idx)} 
+                                   style={{cursor: 'pointer', color: 'red'}}
+                                   title="Remover do estoque"
+                                 >
+                                   <Trash2 size={12}/>
+                                 </span>
+                               </li>
                              ))}
                            </ul>
                         ) : (

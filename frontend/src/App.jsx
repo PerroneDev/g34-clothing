@@ -820,49 +820,15 @@ function App() {
               <button className="btn-close" onClick={() => setShowSizeGuide(false)}>✕</button>
             </div>
 
-            <div className="size-calculator">
-               <p className="text-muted" style={{marginBottom: '1rem', fontSize: '0.9rem'}}>Preencha seus dados para sugerirmos o tamanho ideal (fica salvo no seu celular).</p>
-
-               <div style={{display: 'flex', gap: '0.5rem', marginBottom: '1rem'}}>
-                  <div className="input-field" style={{flex: 1, marginBottom: 0}}>
-                    <label>Altura (cm)</label>
-                    <input type="number" placeholder="Ex: 175" value={calcData.altura} onChange={e => setCalcData({...calcData, altura: e.target.value})} />
-                  </div>
-                  <div className="input-field" style={{flex: 1, marginBottom: 0}}>
-                    <label>Peso (kg)</label>
-                    <input type="number" placeholder="Ex: 70" value={calcData.peso} onChange={e => setCalcData({...calcData, peso: e.target.value})} />
-                  </div>
-               </div>
-
-               <div className="input-field">
-                  <label>Sexo Biológico</label>
-                  <select
-                    style={{width: '100%', padding: '1rem', background: 'var(--bg-main)', border: '1px solid var(--border)', color: 'white', borderRadius: '8px'}}
-                    value={calcData.sexo}
-                    onChange={e => setCalcData({...calcData, sexo: e.target.value})}
-                  >
-                     <option value="M">Masculino</option>
-                     <option value="F">Feminino</option>
-                  </select>
-               </div>
-
-               <button className="btn-primary full" style={{padding: '0.8rem', marginTop: '1rem'}} onClick={calcularTamanho}>
-                 Descobrir Meu Tamanho
-               </button>
-
-               {tamanhoSugerido && (
-                  <div style={{marginTop: '1.5rem', padding: '1rem', background: 'rgba(59, 130, 246, 0.1)', border: '1px solid var(--primary)', borderRadius: '8px', textAlign: 'center'}}>
-                     <h3 style={{marginBottom: '0.5rem'}}>Sugerimos o tamanho: <span style={{color: 'var(--primary)', fontSize: '1.5rem'}}>{tamanhoSugerido}</span></h3>
-                     <button className="btn-primary" style={{padding: '0.5rem 1rem', fontSize: '0.9rem', margin: '0 auto'}} onClick={() => { setSelecaoTemp({...selecaoTemp, tamanho: tamanhoSugerido}); setShowSizeGuide(false); }}>
-                        Usar {tamanhoSugerido}
-                     </button>
-                  </div>
-               )}
+            <div className="size-calculator" style={{textAlign: 'center', padding: '2rem 0'}}>
+               <span style={{fontSize: '3rem'}}>🚧</span>
+               <h3 style={{marginTop: '1rem', color: 'var(--text-muted)'}}>Calculadora em desenvolvimento</h3>
+               <p style={{fontSize: '0.9rem', color: 'var(--text-muted)'}}>Estamos trabalhando para trazer uma inteligência que sugere o tamanho ideal pra você!</p>
             </div>
 
-            <details style={{marginTop: '1.5rem', cursor: 'pointer', borderTop: '1px solid var(--border)', paddingTop: '1rem'}}>
-               <summary style={{fontWeight: 500, color: 'var(--text-muted)'}}>Ver tabela de medidas manual</summary>
-               <div className="table-responsive" style={{marginTop: '1rem'}}>
+            <div style={{marginTop: '1.5rem', borderTop: '1px solid var(--border)', paddingTop: '1rem'}}>
+               <h4 style={{fontWeight: 500, color: 'var(--text-main)', marginBottom: '1rem'}}>Tabela de medidas manual</h4>
+               <div className="table-responsive">
                  <table className="size-table">
                    <thead>
                      <tr>
@@ -879,7 +845,7 @@ function App() {
                    </tbody>
                  </table>
                </div>
-            </details>
+            </div>
           </div>
         </div>
       )}
