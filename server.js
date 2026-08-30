@@ -358,6 +358,8 @@ app.put('/api/admin/config', verifyToken, async (req, res) => {
             heroSubtitulo: req.body.heroSubtitulo,
             heroBanner: heroBannerUrl
         };
+        if (req.body.calcAtiva !== undefined) payload.calcAtiva = req.body.calcAtiva;
+        if (req.body.tabelaMedidas !== undefined) payload.tabelaMedidas = req.body.tabelaMedidas;
         const config = await Config.findOneAndUpdate(
             { key: 'main' },
             { $set: payload },

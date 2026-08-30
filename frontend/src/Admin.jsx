@@ -20,7 +20,7 @@ function Admin() {
   // Controle de Abas: 'dashboard' ou 'producao'
   const [activeTab, setActiveTab] = useState('dashboard');
   const [waStatus, setWaStatus] = useState({ isReady: false, qrCode: '' });
-  const [siteConfig, setSiteConfig] = useState({ heroTitulo: '', heroSubtitulo: '', heroBanner: '' });
+  const [siteConfig, setSiteConfig] = useState({ heroTitulo: '', heroSubtitulo: '', heroBanner: '', calcAtiva: false, tabelaMedidas: [] });
 
   // Modal para adicionar estoque — null quando fechado, ou { produto, cor, tamanho, qtd }
   const [estoqueModal, setEstoqueModal] = useState(null);
@@ -714,6 +714,79 @@ function Admin() {
                     style={{ flex: 1 }} 
                   />
                 </div>
+              </div>
+              <div className="input-field" style={{marginTop: '2rem', borderTop: '1px solid var(--border)', paddingTop: '1.5rem'}}>
+                <h3 style={{marginBottom: '1rem'}}>Guia de Medidas (Calculadora)</h3>
+                <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', marginBottom: '1.5rem' }}>
+                  <input 
+                    type="checkbox" 
+                    checked={siteConfig.calcAtiva || false} 
+                    onChange={e => setSiteConfig(prev => ({...prev, calcAtiva: e.target.checked}))}
+                    style={{ width: '1.2rem', height: '1.2rem' }}
+                  />
+                  <strong>Ativar Calculadora Inteligente de Tamanho (Em testes)</strong>
+                </label>
+                
+                <h4 style={{marginBottom: '0.5rem'}}>Tabela de Medidas Manual</h4>
+                <p style={{fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: '1rem'}}>Preencha os tamanhos e as medidas correspondentes que ficarão visíveis para o cliente.</p>
+                
+                {siteConfig.tabelaMedidas && siteConfig.tabelaMedidas.map((medida, index) => (
+                  <div key={index} style={{display: 'flex', gap: '0.5rem', marginBottom: '0.5rem', alignItems: 'center'}}>
+                    <input 
+                      type="text" 
+                      placeholder="Tam (Ex: P)" 
+                      value={medida.tam} 
+                      onChange={e => {
+                        const newTabela = [...siteConfig.tabelaMedidas];
+                        newTabela[index].tam = e.target.value;
+                        setSiteConfig(prev => ({...prev, tabelaMedidas: newTabela}));
+                      }}
+                      style={{flex: 1}}
+                    />
+                    <input 
+                      type="text" 
+                      placeholder="Altura (Ex: 68cm)" 
+                      value={medida.altura} 
+                      onChange={e => {
+                        const newTabela = [...siteConfig.tabelaMedidas];
+                        newTabela[index].altura = e.target.value;
+                        setSiteConfig(prev => ({...prev, tabelaMedidas: newTabela}));
+                      }}
+                      style={{flex: 1.5}}
+                    />
+                    <input 
+                      type="text" 
+                      placeholder="Largura (Ex: 48cm)" 
+                      value={medida.largura} 
+                      onChange={e => {
+                        const newTabela = [...siteConfig.tabelaMedidas];
+                        newTabela[index].largura = e.target.value;
+                        setSiteConfig(prev => ({...prev, tabelaMedidas: newTabela}));
+                      }}
+                      style={{flex: 1.5}}
+                    />
+                    <button 
+                      className="btn-danger" 
+                      style={{padding: '0.6rem'}}
+                      onClick={() => {
+                        const newTabela = siteConfig.tabelaMedidas.filter((_, i) => i !== index);
+                        setSiteConfig(prev => ({...prev, tabelaMedidas: newTabela}));
+                      }}
+                    >
+                      <Trash2 size={16}/>
+                    </button>
+                  </div>
+                ))}
+                <button 
+                  className="btn-approve" 
+                  style={{marginTop: '0.5rem', background: 'var(--bg-surface)', border: '1px solid var(--border)', fontSize: '0.85rem'}}
+                  onClick={() => {
+                    const newTabela = [...(siteConfig.tabelaMedidas || []), { tam: '', altura: '', largura: '' }];
+                    setSiteConfig(prev => ({...prev, tabelaMedidas: newTabela}));
+                  }}
+                >
+                  + Adicionar Linha
+                </button>
               </div>
               <button 
                 className="btn-primary" 
