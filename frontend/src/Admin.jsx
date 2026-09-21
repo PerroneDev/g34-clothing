@@ -908,7 +908,8 @@ function Admin() {
                             <strong>{pedido.nome}</strong><br/>
                             <span className="text-muted">{pedido.telefone}</span>
                           </td>
-                          <td>
+                          <td style={{ maxWidth: "250px" }}>
+                            <div style={{ overflowX: "auto", whiteSpace: "nowrap" }}>
                             <ul className="admin-item-list">
                               {pedido.itens?.map((item, idx) => (
                                 <li key={item._id || idx}>
@@ -916,6 +917,7 @@ function Admin() {
                                 </li>
                               )) || <span style={{color: 'red'}}>Pedido Antigo Sem Itens</span>}
                             </ul>
+                            </div>
                           </td>
                           <td>{pedido.formaPagamento}</td>
                           <td><strong>{pedido.valorTotal ? `R$ ${pedido.valorTotal.toFixed(2).replace('.', ',')}` : 'R$ --'}</strong></td>
