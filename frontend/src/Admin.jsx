@@ -30,6 +30,35 @@ function Admin() {
   const [novoModeloEdit, setNovoModeloEdit] = useState('');
   const [novaCorEdit, setNovaCorEdit] = useState({ nome: '', hex: '#000000' });
 
+  // Largura redimensionavel da coluna "Itens" (aba Gestao Geral)
+  const [larguraItens, setLarguraItens] = useState(() => {
+    const salvo = parseInt(localStorage.getItem('adminLarguraItens'), 10);
+    return isNaN(salvo) ? 250 : salvo;
+  });
+
+  const iniciarResizeItens = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const startX = e.clientX;
+    const startW = larguraItens;
+    let ultima = startW;
+    const onMove = (ev) => {
+      ultima = Math.min(900, Math.max(120, startW + (ev.clientX - startX)));
+      setLarguraItens(ultima);
+    };
+    const onUp = () => {
+      document.removeEventListener('mousemove', onMove);
+      document.removeEventListener('mouseup', onUp);
+      document.body.style.userSelect = '';
+      document.body.style.cursor = '';
+      try { localStorage.setItem('adminLarguraItens', String(ultima)); } catch (err) {}
+    };
+    document.body.style.userSelect = 'none';
+    document.body.style.cursor = 'col-resize';
+    document.addEventListener('mousemove', onMove);
+    document.addEventListener('mouseup', onUp);
+  };
+
   useEffect(() => {
     if (token) {
       carregarPedidos();
@@ -893,7 +922,18 @@ function Admin() {
                       <tr>
                         <th>Data</th>
                         <th>Cliente</th>
-                        <th>Itens</th>
+                        <th style={{ width: larguraItens, minWidth: larguraItens, position: 'relative' }}>
+                          Itens
+                          <span
+                            onMouseDown={iniciarResizeItens}
+                            onDoubleClick={() => {
+                              setLarguraItens(250);
+                              try { localStorage.setItem('adminLarguraItens', '250'); } catch (err) {}
+                            }}
+                            title="Arraste para redimensionar (duplo clique para resetar)"
+                            style={{ position: 'absolute', top: 0, right: 0, height: '100%', width: '8px', cursor: 'col-resize', userSelect: 'none' }}
+                          />
+                        </th>
                         <th>Pagamento</th>
                         <th>Total</th>
                         <th>Status</th>
@@ -908,8 +948,8 @@ function Admin() {
                             <strong>{pedido.nome}</strong><br/>
                             <span className="text-muted">{pedido.telefone}</span>
                           </td>
-                          <td style={{ maxWidth: "250px" }}>
-                            <div style={{ overflowX: "auto", whiteSpace: "nowrap" }}>
+                          <td style={{ width: larguraItens, maxWidth: larguraItens }}>
+                            <div style={{ overflowX: "auto", whiteSpace: "nowrap", width: '100%' }}>
                             <ul className="admin-item-list">
                               {pedido.itens?.map((item, idx) => (
                                 <li key={item._id || idx}>
