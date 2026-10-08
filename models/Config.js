@@ -7,6 +7,10 @@ const configSchema = new mongoose.Schema({
     heroSubtitulo: { type: String, default: 'Confira os modelos exclusivos.' },
     heroBanner:    { type: String, default: '' }, // base64 ou URL
     
+    // Pausa geral das vendas (o painel admin nunca é afetado)
+    vendasPausadas: { type: Boolean, default: false },
+    msgVendasPausadas: { type: String, default: 'As vendas estão temporariamente pausadas. Volte em breve!' },
+
     // Configurações do Guia de Medidas
     calcAtiva: { type: Boolean, default: false },
     tabelaMedidas: { 

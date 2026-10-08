@@ -196,7 +196,9 @@ async function enviarMensagemPedido(pedido) {
             mensagem += `- ${item.quantidade}x ${item.modelo} (${descCor}Tam: ${item.tamanho})${extra}\n`;
         });
 
-        mensagem += `\n💰 *Valor Total: R$ ${pedido.valorTotal.toFixed(2).replace('.', ',')}*\n\n`;
+        // O valor do pedido já vem calculado conforme a forma de pagamento escolhida (à vista ou parcelado)
+        const rotuloValor = pedido.formaPagamento === 'CREDITO' ? 'Cartão de Crédito' : (pedido.formaPagamento === 'PIX' ? 'PIX' : 'Dinheiro');
+        mensagem += `\n💰 *Valor Total (${rotuloValor}): R$ ${pedido.valorTotal.toFixed(2).replace('.', ',')}*\n\n`;
 
         if (pedido.formaPagamento === 'PIX') {
             mensagem += config.msgPix;
