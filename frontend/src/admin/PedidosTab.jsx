@@ -58,7 +58,9 @@ export default function PedidosTab({ modo, pedidos, produtos, loading, busca, se
       atualizarPedidoLocal(pedido._id, {
         statusPagamento: r.data.statusPagamento,
         statusProducao: r.data.statusProducao,
-        pagoEm: r.data.pagoEm
+        pagoEm: r.data.pagoEm,
+        // o servidor também marca/desmarca as peças: reflete isso na aba Produção sem precisar recarregar
+        itens: pedido.itens?.map((item, i) => ({ ...item, pronto: r.data.itens?.[i]?.pronto ?? item.pronto }))
       });
     } else {
       notify(r.data?.erro || 'Erro ao alterar o status.', 'erro');

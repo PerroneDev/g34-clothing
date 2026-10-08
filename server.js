@@ -484,9 +484,24 @@ app.put('/api/pedidos/:id/status', verifyToken, async (req, res) => {
             campos.statusPagamento = statusPagamento;
             campos.pagoEm = statusPagamento === 'Pago' ? (atual.pagoEm || new Date()) : null;
         }
-        if (statusProducao !== undefined) campos.statusProducao = statusProducao;
+        const opcoes = { returnDocument: 'after' };
+        if (statusProducao !== undefined) {
+            campos.statusProducao = statusProducao;
+            // A produção do pedido e as peças da aba Produção andam juntas: Pronta/Entregue marca todas
+            // as peças sob encomenda como estampadas; voltar para Em Produção desmarca todas
+            campos['itens.$[peca].pronto'] = statusProducao !== 'Em Produção';
+            opcoes.arrayFilters = [{ 'peca.isProntaEntrega': { $ne: true } }];
+        }
 
-        const pedido = await Pedido.findByIdAndUpdate(req.params.id, { $set: campos }, { returnDocument: 'after' });
+        let pedido;
+        try {
+            pedido = await Pedido.findByIdAndUpdate(req.params.id, { $set: campos }, opcoes);
+        } catch (erroItens) {
+            // Pedido antigo sem lista de itens: muda só o status
+            if (statusProducao === undefined) throw erroItens;
+            delete campos['itens.$[peca].pronto'];
+            pedido = await Pedido.findByIdAndUpdate(req.params.id, { $set: campos }, { returnDocument: 'after' });
+        }
         const pagamentoAnterior = atual.statusPagamento;
 
         if (statusProducao !== undefined) await atualizarEtiquetaPedido(pedido.telefone, pedido.statusProducao);

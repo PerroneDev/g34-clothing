@@ -59,9 +59,28 @@ async function numerarProdutos() {
     })));
 }
 
+/**
+ * Pedidos já Prontos/Entregues ficaram com as peças desmarcadas na aba Produção (o status do pedido
+ * e a caixinha de cada peça eram independentes). Marca as peças desses pedidos como estampadas.
+ * Roda uma única vez (registrada na coleção `migracoes`), para não desfazer ajustes futuros.
+ */
+async function sincronizarPecasProntas() {
+    const registro = Pedido.db.collection('migracoes');
+    if (await registro.findOne({ _id: 'sincronizar-pecas-prontas' })) return;
+
+    const r = await Pedido.collection.updateMany(
+        { statusProducao: { $in: ['Pronta', 'Entregue'] }, 'itens.0': { $exists: true } },
+        { $set: { 'itens.$[peca].pronto': true } },
+        { arrayFilters: [{ 'peca.isProntaEntrega': { $ne: true }, 'peca.pronto': { $ne: true } }] }
+    );
+    await registro.insertOne({ _id: 'sincronizar-pecas-prontas', em: new Date(), pedidosAlterados: r.modifiedCount });
+    if (r.modifiedCount > 0) console.log(`🔧 Migração: peças de ${r.modifiedCount} pedido(s) pronto(s)/entregue(s) marcadas como estampadas.`);
+}
+
 async function rodarMigracoes() {
     try {
         await migrarStatusPedidos();
+        await sincronizarPecasProntas();
         await popularPaletaDeCores();
         await numerarProdutos();
     } catch (err) {
